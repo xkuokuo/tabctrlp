@@ -1,0 +1,17 @@
+body{
+    min-width: 300px;
+}
+
+img {
+    margin: 5px;
+}
+
+li {
+    margin: 5px;
+    border-bottom: 1px solid #424242;
+}
+
+img {
+    width: 18px;    
+    height: 18px;
+}
