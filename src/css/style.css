@@ -8,7 +8,18 @@ img {
 
 li {
     margin: 5px;
-    border-bottom: 1px solid #424242;
+}
+
+.tab-selected {
+    background-color: #E0E0E0;
+}
+
+.hidden {
+    font-size:0;
+}
+
+.tab-ignored {
+    color: #E0E0E0;
 }
 
 img {
