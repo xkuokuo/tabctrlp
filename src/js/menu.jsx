@@ -64,8 +64,8 @@ class TabsDisplay extends React.Component {
 //input display div box
 class InputDisplay extends React.Component {
     render() {
-        return <div className="input-display" >{this.props.inputText}</div>;
-        //return <div className="input-display" tabIndex="0"></div>;
+        //return <div className="input-display" >{this.props.inputText}</div>;
+        return <input type="text" className="input-display" value={this.props.inputText} onChange={this.props.onChange}/>;
     }
 }
 
@@ -84,7 +84,7 @@ class App extends React.Component {
             this.setState({selectedTabIndex: tab.index});
         });
         this.handleKeyDown = this.handleKeyDown.bind(this);
-        this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.handleInputChange= this.handleInputChange.bind(this);
         this.updateMatcher = this.updateMatcher.bind(this);
     }
 
@@ -110,14 +110,6 @@ class App extends React.Component {
         chrome.tabs.update(tabID, {active: true, highlighted:true});
     }
 
-    appendInputText(char) {
-        this.setState((prevState, props) => {
-            this.updateMatcher(prevState.inputText + char);
-            return {inputText: prevState.inputText + char};
-        });
-        //TODO: remove hardcode
-    }
-
     updateMatcher(inputText){
         var curriedIfMatch = R.curry(ifMatch)(inputText);
         var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [tab.title, index], this.state.allTabs)));
@@ -125,9 +117,12 @@ class App extends React.Component {
         this.setState({selectedTabIndex: matchedTabsIndex[0]});
     }
 
-    handleKeyPress(e) {
-        var inputChar = String.fromCharCode(e.charCode);
-        this.appendInputText(inputChar);
+    handleInputChange(e) {
+        e.persist();
+        this.setState((prevState, props) => {
+            this.updateMatcher(e.target.value);
+            return {inputText: e.target.value};
+        });
     }
 
     handleKeyDown(e) {
@@ -142,8 +137,8 @@ class App extends React.Component {
 
     render() {
         return (
-            <div tabIndex="0" onKeyDown={this.handleKeyDown} onKeyPress={this.handleKeyPress}>
-                <InputDisplay inputText={this.state.inputText}/>
+            <div onKeyDown={this.handleKeyDown}>
+                <InputDisplay tabIndex="0" inputText={this.state.inputText} onChange={this.handleInputChange}/>
                 <TabsDisplay allTabs={this.state.allTabs} matchedTabsIndex={this.state.matchedTabsIndex} selectedTabIndex={this.state.selectedTabIndex}/>
             </div>);
     }
