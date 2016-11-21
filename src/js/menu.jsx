@@ -7,6 +7,14 @@ function getAllTabsOfCurrentWindow(callback) {
     getAllTabs(chrome.windows.WINDOW_ID_CURRENT, callback);
 }
 
+function pickIndexes(indexes, arr){
+    var res = [];
+    for (let index of indexes){
+        res.push(arr[index]);
+    }
+    return res;
+}
+
 function getAllTabs(windowId, callback) {
     chrome.tabs.query({windowId: windowId}, function(Tabs) {
         callback(Tabs);
@@ -14,11 +22,13 @@ function getAllTabs(windowId, callback) {
 }
 
 function ifMatch(pattern, testStr) {
-    var pos = 0;
+    var remaining = testStr
     for (let char of pattern) {
-        if (testStr.indexOf(char) <= pos) {
+        var pos = remaining.indexOf(char);
+        if (pos <= -1) {
             return false;
         }
+        remaining = remaining.substring(pos);
     }
     return true;
 }
@@ -43,7 +53,7 @@ class TabsDisplay extends React.Component {
     render() {
         var tabEntrys =  R.map((tab) =>
             <TabEntry key={tab.id} tab={tab} selected={tab.index===this.props.selectedTabIndex?true:false}/>,
-            this.props.allTabs);
+            pickIndexes(this.props.matchedTabsIndex, this.props.allTabs));
         return (
             <ul className="tab-list list-unstyled clear-fix">
                 {tabEntrys}
@@ -62,7 +72,7 @@ class InputDisplay extends React.Component {
 class App extends React.Component {
     constructor(props){
         super(props);
-        this.state = {allTabs: [], matchedTabsIndex: [], selectedTabIndex: 0, inputText: 'HH'};
+        this.state = {allTabs: [], matchedTabsIndex: [], selectedTabIndex: 0, inputText: '', matchedTitles: []};
         getAllTabsOfCurrentWindow((returnedTabs) => {
             this.setState({allTabs: returnedTabs});
             var curriedIfMatch = R.curry(ifMatch)('');
@@ -75,6 +85,7 @@ class App extends React.Component {
         });
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.updateMatcher = this.updateMatcher.bind(this);
     }
 
     getSelectedTabID(){
@@ -100,9 +111,18 @@ class App extends React.Component {
     }
 
     appendInputText(char) {
-        this.setState((prevState, props) => ({
-            inputText: prevState.inputText + char
-        }));
+        this.setState((prevState, props) => {
+            this.updateMatcher(prevState.inputText + char);
+            return {inputText: prevState.inputText + char};
+        });
+        //TODO: remove hardcode
+    }
+
+    updateMatcher(inputText){
+        var curriedIfMatch = R.curry(ifMatch)(inputText);
+        var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [tab.title, index], this.state.allTabs)));
+        this.setState({matchedTabsIndex: matchedTabsIndex});
+        this.setState({selectedTabIndex: matchedTabsIndex[0]});
     }
 
     handleKeyPress(e) {
@@ -129,7 +149,6 @@ class App extends React.Component {
     }
 }
 
-
 //Display all tabs
 document.addEventListener('DOMContentLoaded', function() {
     ReactDOM.render(
@@ -137,5 +156,3 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('root')
     );
 });
-
-
