@@ -22,6 +22,12 @@ li {
     color: #E0E0E0;
 }
 
+.input-display {
+    height: 30px;
+    width: 100%;
+    background-color: #FFF9C4;
+}
+
 img {
     width: 18px;    
     height: 18px;

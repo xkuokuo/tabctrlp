@@ -1,5 +1,7 @@
 var R = require('ramda');
 var $ = require('jquery');
+var React = require('react');
+var ReactDOM = require('react-dom');
 
 var currentTabIndex = 0;
 chrome.tabs.getSelected(function(tab){
@@ -32,8 +34,9 @@ function createTabEntry(Tab) {
         entry.addClass('tab-selected');
     }
     var favIcon = $('<img class="img-responsive pull-left" src=' + Tab.favIconUrl + '>');
-    var tabTitle = $('<p></p>')
-    var tabID = $('<p></p>')
+    var tabTitle = $('<p></p>');
+    tabTitle.addClass('tabTitle');
+    var tabID = $('<p></p>');
     tabID.text(Tab.id);
     tabID.addClass('tabID');
     tabID.addClass('hidden');
@@ -66,6 +69,14 @@ function getSelectedTabID() {
     return  Number($.trim($('.tab-selected .tabID').text()));
 }
 
+function appendToInputDisplay(char) {
+    $('.input-display').append(char);
+}
+
+function deleteFromInputDisplay(char) {
+    $('.input-display').append(char);
+}
+
 //Bind the Up and Down button
 $(document).keydown(function(e){
     if (e.keyCode == 38) {
@@ -73,15 +84,44 @@ $(document).keydown(function(e){
     }else if (e.keyCode == 40) {
         moveDown();
     }else if (e.keyCode == 13) {
-        //alert("Tab" + getSelectedTabID() + "selected")
         chrome.tabs.update(getSelectedTabID(), {active: true, highlighted:true});
-        //$('ul').append('<div>'+getSelectedTabID()+'</div>');
     }
+    /*
+    else {
+        appendToInputDisplay(String.fromCharCode(e.keyCode));
+    }
+    */
 })
+
+//input display div box
+class InputDisplay extends React.Component {
+    constructor(props) {
+        super(props)
+        this.state = {input: 'PlaceHolder'};
+        this.handleKeyPress = this.handleKeyPress.bind(this);
+    }
+
+    handleKeyPress(e){
+        var inputChar = String.fromCharCode(e.charCode);
+        this.setState((prevState, props) => ({
+            input: prevState.input + inputChar
+        }));
+    }
+
+    render() {
+        return <div className="input-display" tabIndex="0" onKeyPress={this.handleKeyPress}>{this.state.input}</div>;
+    }
+}
 
 //Display all tabs
 document.addEventListener('DOMContentLoaded', function() {
     getAllTabsOfCurrentWindow(function(resultTabs){
         R.map(addTabEntry, resultTabs);
     });
+    ReactDOM.render(
+        <InputDisplay/>,
+        document.getElementById('root')
+    );
 });
+
+

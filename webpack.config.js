@@ -3,7 +3,7 @@ var CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
     entry: {
-        menu: "./src/js/menu.js",
+        menu: "./src/js/menu.jsx",
         content: "./src/js/content.js",
         background: "./src/js/background.js",
     },
@@ -11,6 +11,15 @@ module.exports = {
         path: path.join(__dirname,"build/js"),
         filename: "[name].js"
     },
+	module: {
+		loaders: [{
+			test: path.join(__dirname, 'src/js/menu.jsx'),
+    		loader: 'babel-loader',
+			query: {
+				presets: ['es2015', 'react']
+			}
+		}]
+	},
     plugins: [
         new CopyWebpackPlugin([
             { from: path.join(__dirname,"src/html/"), to: path.join(__dirname,"build/html") },
