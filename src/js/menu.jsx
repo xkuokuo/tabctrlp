@@ -13,8 +13,17 @@ function getAllTabs(windowId, callback) {
     });
 }
 
-class TabEntry extends React.Component {
+function ifMatch(pattern, testStr) {
+    var pos = 0;
+    for (let char of pattern) {
+        if (testStr.indexOf(char) <= pos) {
+            return false;
+        }
+    }
+    return true;
+}
 
+class TabEntry extends React.Component {
     render() {
         return (
             <li className={this.props.selected ? "clearFix tab-selected" : "clearFix"}>
@@ -28,25 +37,44 @@ class TabEntry extends React.Component {
 class TabsDisplay extends React.Component {
     constructor(props) {
         super(props)
-        this.state = {allTabs: [], matchedTabsIndex: [], selectedTabIndex: 0};
+        this.state = {allTabs: props.allTabs, matchedTabsIndex: props.matchedTabsIndex, selectedTabIndex: props.selectedTabIndex};
+    }
+
+    render() {
+        var tabEntrys =  R.map((tab) =>
+            <TabEntry key={tab.id} tab={tab} selected={tab.index===this.props.selectedTabIndex?true:false}/>,
+            this.props.allTabs);
+        return (
+            <ul className="tab-list list-unstyled clear-fix">
+                {tabEntrys}
+            </ul>);
+    }
+}
+
+//input display div box
+class InputDisplay extends React.Component {
+    render() {
+        return <div className="input-display" >{this.props.inputText}</div>;
+        //return <div className="input-display" tabIndex="0"></div>;
+    }
+}
+
+class App extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = {allTabs: [], matchedTabsIndex: [], selectedTabIndex: 0, inputText: 'HH'};
         getAllTabsOfCurrentWindow((returnedTabs) => {
             this.setState({allTabs: returnedTabs});
+            var curriedIfMatch = R.curry(ifMatch)('');
+            var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [((tab) => tab.title), index], returnedTabs)));
+            this.setState({matchedTabsIndex: matchedTabsIndex});
         });
         chrome.tabs.getSelected((tab) => {
             //TODO: getSelected methos is deprecated. Replace it
             this.setState({selectedTabIndex: tab.index});
         });
         this.handleKeyDown = this.handleKeyDown.bind(this);
-    }
-
-    handleKeyDown(e){
-        if (e.keyCode == 38) {
-            this.moveUp();
-        }else if (e.keyCode == 40) {
-            this.moveDown();
-        }else if (e.keyCode == 13) {
-            this.jumpToTab(this.getSelectedTabID());
-        }
+        this.handleKeyPress = this.handleKeyPress.bind(this);
     }
 
     getSelectedTabID(){
@@ -71,51 +99,41 @@ class TabsDisplay extends React.Component {
         chrome.tabs.update(tabID, {active: true, highlighted:true});
     }
 
+    appendInputText(char) {
+        this.setState((prevState, props) => ({
+            inputText: prevState.inputText + char
+        }));
+    }
+
+    handleKeyPress(e) {
+        var inputChar = String.fromCharCode(e.charCode);
+        this.appendInputText(inputChar);
+    }
+
+    handleKeyDown(e) {
+        if (e.keyCode == 38) {
+            this.moveUp();
+        }else if (e.keyCode == 40) {
+            this.moveDown();
+        }else if (e.keyCode == 13) {
+            this.jumpToTab(this.getSelectedTabID());
+        }
+    }
+
     render() {
-        var tabEntrys =  R.map((tab) =>
-            <TabEntry key={tab.id} tab={tab} selected={tab.index===this.state.selectedTabIndex?true:false}/>,
-            this.state.allTabs);
         return (
-            <div onKeyDown={this.handleKeyDown}>
-                {this.props.children}
-                <ul className="tab-list list-unstyled clear-fix">
-                    {tabEntrys}
-                </ul>
+            <div tabIndex="0" onKeyDown={this.handleKeyDown} onKeyPress={this.handleKeyPress}>
+                <InputDisplay inputText={this.state.inputText}/>
+                <TabsDisplay allTabs={this.state.allTabs} matchedTabsIndex={this.state.matchedTabsIndex} selectedTabIndex={this.state.selectedTabIndex}/>
             </div>);
     }
 }
 
 
-//input display div box
-class InputDisplay extends React.Component {
-    constructor(props) {
-        super(props)
-        this.state = {input: ''};
-        this.handleKeyPress = this.handleKeyPress.bind(this);
-    }
-
-    handleKeyPress(e){
-        var inputChar = String.fromCharCode(e.charCode);
-        this.setState((prevState, props) => ({
-            input: prevState.input + inputChar
-        }));
-    }
-
-    appendToDisplay(char){
-        this.setState((prevState, props) => ({
-            input: prevState.input + inputChar
-        }));
-    }
-
-    render() {
-        return <div className="input-display" tabIndex="0" onKeyPress={this.handleKeyPress}>{this.state.input}</div>;
-    }
-}
-
 //Display all tabs
 document.addEventListener('DOMContentLoaded', function() {
     ReactDOM.render(
-        <TabsDisplay><InputDisplay/></TabsDisplay>,
+        <App/>,
         document.getElementById('root')
     );
 });
