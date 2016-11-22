@@ -8,10 +8,15 @@ img {
 
 li {
     margin: 5px;
+    cursor: pointer;
 }
 
 .tab-selected {
     background-color: #E0E0E0;
+}
+
+.tab-title {
+    word-wrap: break-word;
 }
 
 .hidden {
@@ -23,6 +28,8 @@ li {
 }
 
 .input-display {
+    padding: 5px;
+    margin: 5px;
     height: 30px;
     width: 100%;
     background-color: #B2EBF2;
@@ -35,4 +42,5 @@ img {
 
 input:focus {
     outline:none;
+    border: 0px solid black;
 }

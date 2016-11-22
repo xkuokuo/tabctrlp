@@ -21,7 +21,39 @@ function getAllTabs(windowId, callback) {
     });
 }
 
+function containsUpperCase(str) {
+    return str.toLowerCase() != str;
+}
+
+function addMarkup(pattern, testStr) {
+    var res = '';
+    var remaining = containsUpperCase(pattern) ? testStr : testStr.toLowerCase();
+    var remainingOriginal = testStr;
+    for (let char of pattern) {
+        var pos = remaining.indexOf(char);
+        if (pos <= -1) {
+            //not a match
+            return testStr;
+        }
+        //extract the unmarked part from the beginning and append to res
+        //add markup around this position
+        res = res + remainingOriginal.substring(0,pos) + '<mark>' + remainingOriginal.charAt(pos) + '</mark>';
+        remaining = remaining.substring(pos + 1);
+        remainingOriginal = remainingOriginal.substring(pos + 1);
+    }
+    res = res + remainingOriginal;
+    return res;
+}
+
 function ifMatch(pattern, testStr) {
+    if (containsUpperCase(pattern)) {
+        return ifMatchCaseSensitive(pattern, testStr);
+    } else {
+        return ifMatchCaseSensitive(pattern, testStr.toLowerCase());
+    }
+}
+
+function ifMatchCaseSensitive(pattern, testStr){
     var remaining = testStr
     for (let char of pattern) {
         var pos = remaining.indexOf(char);
@@ -34,25 +66,34 @@ function ifMatch(pattern, testStr) {
 }
 
 class TabEntry extends React.Component {
+    constructor(props) {
+        super(props);
+        this.jumpToTab = this.jumpToTab.bind(this);
+        this.handleClick= this.handleClick.bind(this);
+    }
+
+    handleClick(event){
+        this.jumpToTab(this.props.tab.id);
+    }
+
+    jumpToTab (tabID) {
+        chrome.tabs.update(tabID, {active: true, highlighted:true});
+    }
+
     render() {
         return (
-            <li className={this.props.selected ? "clearFix tab-selected" : "clearFix"}>
+            <li className={this.props.selected ? "clearFix tab-selected" : "clearFix"} onClick={this.handleClick}>
                 <img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
-                <p className="tabTitle">{this.props.tab.title}</p>
+                <p className="tab-title" dangerouslySetInnerHTML={{__html: this.props.decorator(this.props.tab.title)}}></p>
                 <p className="tabID hidden">{this.props.tab.id}</p>
             </li>);
     }
 }
 
 class TabsDisplay extends React.Component {
-    constructor(props) {
-        super(props)
-        this.state = {allTabs: props.allTabs, matchedTabsIndex: props.matchedTabsIndex, selectedTabIndex: props.selectedTabIndex};
-    }
-
     render() {
         var tabEntrys =  R.map((tab) =>
-            <TabEntry key={tab.id} tab={tab} selected={tab.index===this.props.selectedTabIndex?true:false}/>,
+            <TabEntry decorator={this.props.decorator} key={tab.id} tab={tab} selected={tab.index===this.props.selectedTabIndex?true:false}/>,
             pickIndexes(this.props.matchedTabsIndex, this.props.allTabs));
         return (
             <ul className="tab-list list-unstyled clear-fix">
@@ -64,7 +105,6 @@ class TabsDisplay extends React.Component {
 //input display div box
 class InputDisplay extends React.Component {
     render() {
-        //return <div className="input-display" >{this.props.inputText}</div>;
         return <input type="text" className="input-display" value={this.props.inputText} onChange={this.props.onChange}/>;
     }
 }
@@ -76,7 +116,7 @@ class App extends React.Component {
         getAllTabsOfCurrentWindow((returnedTabs) => {
             this.setState({allTabs: returnedTabs});
             var curriedIfMatch = R.curry(ifMatch)('');
-            var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [((tab) => tab.title), index], returnedTabs)));
+            var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [tab.title, index], returnedTabs)));
             this.setState({matchedTabsIndex: matchedTabsIndex});
         });
         chrome.tabs.getSelected((tab) => {
@@ -89,20 +129,20 @@ class App extends React.Component {
     }
 
     getSelectedTabID(){
-        return this.state.allTabs[this.state.selectedTabIndex].id;
+        return this.state.allTabs[this.state.matchedTabsIndex[this.state.selectedTabIndex]].id;
     }
 
     moveDown(){
         this.setState((prevState, props) => {
             var newIndex = prevState.selectedTabIndex + 1;
-            return {selectedTabIndex: newIndex>=this.state.allTabs.length ? 0 : newIndex};
+            return {selectedTabIndex: newIndex>=this.state.matchedTabsIndex.length ? 0 : newIndex};
         });
     }
 
     moveUp(){
         this.setState((prevState, props) => {
             var newIndex = prevState.selectedTabIndex - 1;
-            return {selectedTabIndex: newIndex<0 ? this.state.allTabs.length-1 : newIndex};
+            return {selectedTabIndex: newIndex<0 ? this.state.matchedTabsIndex.length-1 : newIndex};
         });
     }
 
@@ -114,13 +154,13 @@ class App extends React.Component {
         var curriedIfMatch = R.curry(ifMatch)(inputText);
         var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [tab.title, index], this.state.allTabs)));
         this.setState({matchedTabsIndex: matchedTabsIndex});
-        this.setState({selectedTabIndex: matchedTabsIndex[0]});
+        this.setState({selectedTabIndex: 0});
     }
 
     handleInputChange(e) {
         e.persist();
+        this.updateMatcher(e.target.value);
         this.setState((prevState, props) => {
-            this.updateMatcher(e.target.value);
             return {inputText: e.target.value};
         });
     }
@@ -139,7 +179,7 @@ class App extends React.Component {
         return (
             <div onKeyDown={this.handleKeyDown}>
                 <InputDisplay tabIndex="0" inputText={this.state.inputText} onChange={this.handleInputChange}/>
-                <TabsDisplay allTabs={this.state.allTabs} matchedTabsIndex={this.state.matchedTabsIndex} selectedTabIndex={this.state.selectedTabIndex}/>
+                <TabsDisplay decorator={R.curry(addMarkup)(this.state.inputText)} allTabs={this.state.allTabs} matchedTabsIndex={this.state.matchedTabsIndex} selectedTabIndex={this.state.matchedTabsIndex[this.state.selectedTabIndex]}/>
             </div>);
     }
 }
