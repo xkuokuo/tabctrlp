@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ktrustme/ChromCtrlP.git"
+    "url": "git+https://github.com/ktrustme/ChromeCtrlP.git"
   },
   "author": "kuoxin",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ktrustme/ChromCtrlP/issues"
+    "url": "https://github.com/ktrustme/ChromeCtrlP/issues"
   },
-  "homepage": "https://github.com/ktrustme/ChromCtrlP#readme",
+  "homepage": "https://github.com/ktrustme/ChromeCtrlP#readme",
   "devDependencies": {
     "babel-core": "^6.18.2",
     "babel-loader": "^6.2.8",
