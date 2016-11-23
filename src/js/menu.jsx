@@ -25,6 +25,53 @@ function containsUpperCase(str) {
     return str.toLowerCase() != str;
 }
 
+function addMarkupAdvanced (pattern, testStr) {
+    var resultList = [];
+    addMarkupAdvancedRecursive(pattern, testStr, '', resultList);
+    var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''),resultList);
+    var numOfMarksCount = R.map((res) => (res.match(/<mark>/g)||[]).length, mergedResultList);
+    return mergedResultList[findMinIndex(numOfMarksCount)]
+}
+
+function findMinIndex(arr) {
+    var minIndex = 0;
+    for (let i = 0; i < arr.length; i++){
+        if (arr[i]< arr[minIndex]) {
+            minIndex = i;
+        }
+    }
+    return minIndex;
+}
+
+function addMarkupAdvancedRecursive(pattern, testStr, partialRes, resultList) {
+    if (pattern.length === 0) {
+        //base case, find a solution
+        resultList.push(partialRes + testStr);
+        return;
+    }
+    if (!ifMatch(pattern, testStr)) {
+        return;
+    }
+    var remaining = containsUpperCase(pattern) ? testStr : testStr.toLowerCase();
+    var remainingOriginal  = testStr;
+    while(remaining.length >= pattern.length) {
+        var pos = remaining.indexOf(pattern.charAt(0));
+        if (pos <= -1) {
+            return;        //not a potential solution
+        }
+        //add/mark the result to partial res and go ahead (recursive call)
+        var newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
+            '<mark>' + remainingOriginal.charAt(pos) + '</mark>';
+        addMarkupAdvancedRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList);
+
+        //ignore the result, move remaining to a new position, move partialRes to a new position
+        partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
+        remaining = remaining.substring(pos+1);
+        remainingOriginal = remainingOriginal.substring(pos+1);
+    }
+    return;
+}
+
 function addMarkup(pattern, testStr) {
     var res = '';
     var remaining = containsUpperCase(pattern) ? testStr : testStr.toLowerCase();
@@ -37,11 +84,14 @@ function addMarkup(pattern, testStr) {
         }
         //extract the unmarked part from the beginning and append to res
         //add markup around this position
-        res = res + remainingOriginal.substring(0,pos) + '<mark>' + remainingOriginal.charAt(pos) + '</mark>';
+        res = res + remainingOriginal.substring(0,pos) +
+            '<mark>' + remainingOriginal.charAt(pos) + '</mark>';
         remaining = remaining.substring(pos + 1);
         remainingOriginal = remainingOriginal.substring(pos + 1);
     }
     res = res + remainingOriginal;
+    //replace duplicate mark tag
+    res = res.replace(/<\/mark><mark>/g, '');
     return res;
 }
 
@@ -84,21 +134,59 @@ class TabEntry extends React.Component {
         return (
             <li className={this.props.selected ? "clearFix tab-selected" : "clearFix"} onClick={this.handleClick}>
                 <img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
-                <p className="tab-title" dangerouslySetInnerHTML={{__html: this.props.decorator(this.props.tab.title)}}></p>
+                <p className="tab-title"
+                    dangerouslySetInnerHTML={{__html: this.props.decorator(this.props.tab.title)}}>
+                </p>
                 <p className="tabID hidden">{this.props.tab.id}</p>
             </li>);
     }
 }
 
-class TabsDisplay extends React.Component {
+class TabsList extends React.Component {
+    componentDidMount() {
+        this.tabsListDOM = ReactDOM.findDOMNode(this);
+    }
+
+    componentDidUpdate() {
+        if (this.selectedTabEntry) {
+            var tabsListHeight = this.tabsListDOM.offsetHeight;
+            var scrollOffset = this.tabsListDOM.scrollTop;
+            var selectedTabEntryDOM = ReactDOM.findDOMNode(this.selectedTabEntry);
+            var tabHeight = selectedTabEntryDOM.offsetHeight;
+
+            if (selectedTabEntryDOM.offsetTop + tabHeight > tabsListHeight + scrollOffset) {
+                scrollOffset = selectedTabEntryDOM.offsetTop - tabsListHeight;
+            } else if (selectedTabEntryDOM.offsetTop < scrollOffset) {
+                scrollOffset = selectedTabEntryDOM.offsetTop - tabHeight;
+            }
+
+            ReactDOM.findDOMNode(this).scrollTop = scrollOffset;
+        }
+    }
+
     render() {
-        var tabEntrys =  R.map((tab) =>
-            <TabEntry decorator={this.props.decorator} key={tab.id} tab={tab} selected={tab.index===this.props.selectedTabIndex?true:false}/>,
+        var tabEntrys = R.map((tab) => {
+                let selected = tab.index===this.props.selectedTabIndex?true:false;
+                return <TabEntry
+                    tab={tab} key={tab.id}
+                    decorator={this.props.decorator}
+                    ref={(tabEntry)=>{
+                        if(selected){
+                            this.selectedTabEntry = tabEntry;
+                        }
+                    }}
+                    selected={selected}/>;
+            },
             pickIndexes(this.props.matchedTabsIndex, this.props.allTabs));
+
         return (
-            <ul className="tab-list list-unstyled clear-fix">
-                {tabEntrys}
-            </ul>);
+                <div className="tabs-list">
+                    <ul
+                        className="tab-list list-unstyled clear-fix">
+                        {tabEntrys}
+                    </ul>
+                </div>
+            );
     }
 }
 
@@ -112,16 +200,19 @@ class InputDisplay extends React.Component {
 class App extends React.Component {
     constructor(props){
         super(props);
-        this.state = {allTabs: [], matchedTabsIndex: [], selectedTabIndex: 0, inputText: '', matchedTitles: []};
+        this.state = {allTabs: [], matchedTabsIndex: [], hightlightedTabPos: 0, inputText: '', matchedTitles: []};
         getAllTabsOfCurrentWindow((returnedTabs) => {
             this.setState({allTabs: returnedTabs});
             var curriedIfMatch = R.curry(ifMatch)('');
-            var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [tab.title, index], returnedTabs)));
+            var matchedTabsIndex = R.map((pair) => pair[1],
+                R.filter((pair) => curriedIfMatch(pair[0]),
+                    R.addIndex(R.map)((tab, index) => [tab.title, index],
+                        returnedTabs)));
             this.setState({matchedTabsIndex: matchedTabsIndex});
         });
         chrome.tabs.getSelected((tab) => {
             //TODO: getSelected methos is deprecated. Replace it
-            this.setState({selectedTabIndex: tab.index});
+            this.setState({hightlightedTabPos: tab.index});
         });
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleInputChange= this.handleInputChange.bind(this);
@@ -129,20 +220,22 @@ class App extends React.Component {
     }
 
     getSelectedTabID(){
-        return this.state.allTabs[this.state.matchedTabsIndex[this.state.selectedTabIndex]].id;
+        return this.state.allTabs[this.state.matchedTabsIndex[this.state.hightlightedTabPos]].id;
     }
 
     moveDown(){
         this.setState((prevState, props) => {
-            var newIndex = prevState.selectedTabIndex + 1;
-            return {selectedTabIndex: newIndex>=this.state.matchedTabsIndex.length ? 0 : newIndex};
+            var newIndex = prevState.hightlightedTabPos + 1;
+            return {
+                hightlightedTabPos: newIndex>=this.state.matchedTabsIndex.length ? 0 : newIndex};
         });
     }
 
     moveUp(){
         this.setState((prevState, props) => {
-            var newIndex = prevState.selectedTabIndex - 1;
-            return {selectedTabIndex: newIndex<0 ? this.state.matchedTabsIndex.length-1 : newIndex};
+            var newIndex = prevState.hightlightedTabPos- 1;
+            return {
+                hightlightedTabPos: newIndex<0 ? this.state.matchedTabsIndex.length-1 : newIndex};
         });
     }
 
@@ -152,9 +245,12 @@ class App extends React.Component {
 
     updateMatcher(inputText){
         var curriedIfMatch = R.curry(ifMatch)(inputText);
-        var matchedTabsIndex = R.map((pair) => pair[1], R.filter((pair) => curriedIfMatch(pair[0]), R.addIndex(R.map)((tab, index) => [tab.title, index], this.state.allTabs)));
+        var matchedTabsIndex = R.map((pair) => pair[1],
+            R.filter((pair) => curriedIfMatch(pair[0]),
+                R.addIndex(R.map)((tab, index) => [tab.title, index],
+                    this.state.allTabs)));
         this.setState({matchedTabsIndex: matchedTabsIndex});
-        this.setState({selectedTabIndex: 0});
+        this.setState({hightlightedTabPos: 0});
     }
 
     handleInputChange(e) {
@@ -179,7 +275,11 @@ class App extends React.Component {
         return (
             <div onKeyDown={this.handleKeyDown}>
                 <InputDisplay tabIndex="0" inputText={this.state.inputText} onChange={this.handleInputChange}/>
-                <TabsDisplay decorator={R.curry(addMarkup)(this.state.inputText)} allTabs={this.state.allTabs} matchedTabsIndex={this.state.matchedTabsIndex} selectedTabIndex={this.state.matchedTabsIndex[this.state.selectedTabIndex]}/>
+                <TabsList
+                    decorator={R.curry(addMarkupAdvanced)(this.state.inputText)}
+                    allTabs={this.state.allTabs}
+                    matchedTabsIndex={this.state.matchedTabsIndex}
+                    selectedTabIndex={this.state.matchedTabsIndex[this.state.hightlightedTabPos]}/>
             </div>);
     }
 }

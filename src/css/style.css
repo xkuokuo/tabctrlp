@@ -8,7 +8,13 @@ img {
 
 li {
     margin: 5px;
+    padding: 5px;
     cursor: pointer;
+}
+
+.tabs-list {
+    height: 500px;
+    overflow-y: scroll;
 }
 
 .tab-selected {
@@ -38,6 +44,7 @@ li {
 img {
     width: 18px;    
     height: 18px;
+    margin-top: 1px; 
 }
 
 input:focus {
