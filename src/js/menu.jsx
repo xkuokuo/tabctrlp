@@ -2,6 +2,7 @@ var R = require('ramda');
 var $ = require('jquery');
 var React = require('react');
 var ReactDOM = require('react-dom');
+var ReactCSSTransitionGroup = require('react-addons-css-transition-group');
 
 function getAllTabsOfCurrentWindow(callback) {
     getAllTabs(chrome.windows.WINDOW_ID_CURRENT, callback);
@@ -103,26 +104,44 @@ class TabEntry extends React.Component {
     constructor(props) {
         super(props);
         this.jumpToTab = this.jumpToTab.bind(this);
-        this.handleClick= this.handleClick.bind(this);
+        this.handleClick = this.handleClick.bind(this);
+        this.handleRemove = this.handleRemove.bind(this);
+        this.handleHover = this.handleHover.bind(this);
     }
+
+	handleRemove(event){
+		this.props.handleRemove(this.props.tab.id);
+	}
+
+	handleHover(event) {
+		this.props.handleHover(this.props.tab.id);
+	}
 
     handleClick(event){
         this.jumpToTab(this.props.tab.id);
     }
 
-    jumpToTab (tabID) {
-        chrome.tabs.update(tabID, {active: true, highlighted:true});
+    jumpToTab (tabId) {
+        chrome.tabs.update(tabId, {active: true, highlighted:true});
     }
 
     render() {
         return (
-            <li className={this.props.selected ? "clearFix tab-selected" : "clearFix"} onClick={this.handleClick}>
-                <img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
-                <p className="tab-title"
-                    dangerouslySetInnerHTML={{__html: this.props.tab.title}}>
-                </p>
-                <p className="tabID hidden">{this.props.tab.id}</p>
-            </li>);
+			<div className="row">
+            	<li className={this.props.selected ? "clearFix tab-selected col-md-10 col-sm-10 col-xs-10" : "clearFix col-md-10 col-sm-10 col-xs-10"}
+					onClick={this.handleClick}
+					onMouseOver={this.handleHover}>
+                	<img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
+                	<p className="tab-title"
+                    	dangerouslySetInnerHTML={{__html: this.props.tab.title}}>
+                	</p>
+                	<p className="hidden">{this.props.tab.id}</p>
+            	</li>
+				<div className="col-md-2 col-sm-2 col-xs-2">
+					<button className="btn-remove" onClick={this.handleRemove}>X</button>
+				</div>
+			</div>
+		);
     }
 }
 
@@ -158,18 +177,16 @@ class TabsList extends React.Component {
                             this.selectedTabEntry = tabEntry;
                         }
                     }}
+					handleRemove={this.props.handleRemove}
+					handleHover={this.props.handleHover}
                     selected={selected}/>;
             },
             this.props.matchedTabs);
 
-        return (
-                <div className="tabs-list">
-                    <ul
-                        className="tab-list list-unstyled clear-fix">
-                        {tabEntrys}
-                    </ul>
-                </div>
-            );
+        return (<div className="tabs-list">
+				<ul className="list-unstyled clear-fix">
+                    {tabEntrys}
+				</ul></div>);
     }
 }
 
@@ -195,13 +212,21 @@ class App extends React.Component {
             this.currentTabIndex = tab.index;
             this.setState({highlightedTabPos: tab.index});
         });
+
+		//method binding
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleInputChange= this.handleInputChange.bind(this);
         this.updateMatchedTabs = this.updateMatchedTabs.bind(this);
+        this.handleRemove= this.handleRemove.bind(this);
+        this.handleHover = this.handleHover.bind(this);
+		this.updateHighlightedPos = this.updateHighlightedPos.bind(this);
+
+		//some state init
+		this.highlightedTabPosHistory = [];
+		this.inputText= '';
     }
 
     getSelectedTabID(){
-        //return this.state.allTabs[this.state.matchedTabsIndex[this.state.highlightedTabPos]].id;
         return this.state.matchedTabs[this.state.highlightedTabPos].id;
     }
 
@@ -221,33 +246,79 @@ class App extends React.Component {
         });
     }
 
-    jumpToTab(tabID){
-        chrome.tabs.update(tabID, {active: true, highlighted:true});
+    jumpToTab(tabId){
+        chrome.tabs.update(tabId, {active: true, highlighted:true});
     }
 
+	handleHover(tabId) {
+		R.addIndex(R.map)((tab, index) => {
+			if (tab.id === tabId) {
+				this.setState({highlightedTabPos: index});
+			}
+			},
+			this.state.allTabs);
+	}
+
+    handleRemove(tabId) {
+        chrome.tabs.remove(tabId);
+		chrome.tabs.onRemoved.addListener((tabId)=>{
+			getAllTabsOfCurrentWindow((returnedTabs) => {
+    			this.setState({allTabs: returnedTabs}, () => {
+					var matchedTabs =  this.updateMatchedTabs(this.inputText);
+					if (matchedTabs.length <= this.state.highlightedTabPos)
+						this.setState({highlightedTabPos: matchedTabs.length-1})
+				});
+			});
+		});
+	}
+
+	updateHighlightedPos() {
+		if (this.state.highlightedTabPos >= this.state.matchedTabs.length) {
+			this.setState({highlightedTabPos: 0});
+		}
+	}
+
     updateMatchedTabs(inputText){
+		var matchedTabs;
         if (inputText) {
             var curriedIfMatch = R.curry(ifMatch)(inputText);
-            var matchedTabs = R.sort((tab1, tab2) => (countMarkTag(tab1.title) - countMarkTag(tab2.title)),
+            matchedTabs = R.sort((tab1, tab2) => {
+                    let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
+                    if (markCount != 0) {
+                        return markCount;
+                    } else {
+                        return tab1.title.indexOf('<mark>') - tab2.title.indexOf('<mark>');
+                    }
+                },
                 R.map((tab) => ( new TabModel({title: addMarkupAdvanced(inputText, tab.title), id: tab.id, index: tab.index, favIconUrl: tab.favIconUrl})),
                     R.filter((tab) => curriedIfMatch(tab.title),
                         R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}),
                             this.state.allTabs))));
             this.setState({matchedTabs: matchedTabs});
-            this.setState({highlightedTabPos: 0});
         } else {
-            var matchedTabs = R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}), this.state.allTabs);
+            matchedTabs = R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}), this.state.allTabs);
             this.setState({matchedTabs: matchedTabs});
-            this.setState({highlightedTabPos: this.currentTabIndex});
         }
+		return matchedTabs;
     }
 
     handleInputChange(e) {
+		console.log('current pos is: ' + this.state.highlightedTabPos);
+		var oldInputText = this.inputText;
+		var newInputText = e.target.value;
+
         e.persist();
-        this.updateMatchedTabs(e.target.value);
-        this.setState((prevState, props) => {
-            return {inputText: e.target.value};
-        });
+		this.inputText = e.target.value;
+        var matchedTabs = this.updateMatchedTabs(e.target.value);
+        this.setState({inputText: e.target.value});
+
+		if(oldInputText.length < newInputText.length) {
+			this.highlightedTabPosHistory.push(this.state.highlightedTabPos);
+			this.setState({highlightedTabPos: 0});
+		} else {
+			var prevPos = this.highlightedTabPosHistory.pop();
+            this.setState({highlightedTabPos: prevPos?prevPos:0});
+		}
     }
 
     handleKeyDown(e) {
@@ -257,25 +328,35 @@ class App extends React.Component {
             this.moveDown();
         }else if (e.keyCode == 13) {
             this.jumpToTab(this.getSelectedTabID());
-        }
+		}else if (e.keyCode == 111118) {
+            this.handleRemove(this.getSelectedTabID());
+		}
     }
 
     render() {
-        return (
-            <div onKeyDown={this.handleKeyDown}>
-                <InputDisplay tabIndex="0" inputText={this.state.inputText} onChange={this.handleInputChange}/>
-                <TabsList
-                    allTabs={this.state.allTabs}
-                    matchedTabs={this.state.matchedTabs}
-                    selectedTabIndex={this.state.matchedTabs.length>0?this.state.matchedTabs[this.state.highlightedTabPos].index:0}/>
-            </div>);
+        return (<ReactCSSTransitionGroup
+			transitionAppear={true}
+		    transitionAppearTimeout={500}
+		    transitionName="panel"
+			transitionEnter={false}
+		    transitionLeave={false}>
+				<div className="panel container" key={"dummykdy"} onKeyDown={this.handleKeyDown}>
+                 	<InputDisplay tabIndex="0" inputText={this.state.inputText} onChange={this.handleInputChange}/>
+                 	<TabsList
+                        allTabs={this.state.allTabs}
+                        matchedTabs={this.state.matchedTabs}
+						handleRemove={this.handleRemove}
+						handleHover={this.handleHover}
+                        selectedTabIndex={(this.state.matchedTabs.length > this.state.highlightedTabPos)?this.state.matchedTabs[this.state.highlightedTabPos].index:0}/>
+                </div>
+			</ReactCSSTransitionGroup>);
     }
 }
 
 //Display all tabs
 document.addEventListener('DOMContentLoaded', function() {
     ReactDOM.render(
-        <App/>,
+		<App/>,
         document.getElementById('root')
     );
 });
