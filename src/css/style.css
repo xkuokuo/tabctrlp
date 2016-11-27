@@ -83,13 +83,13 @@ input:focus {
 
 .panel-appear {
     opacity: 0.01 !important;
-	width: 50px !important;
-	height: 50px !important;
+	width: 500px !important;
+	height: 500px !important;
 }
 
 .panel-appear.panel-appear-active {
     opacity: 1 !important;
 	width: 500px !important;
 	height: 500px !important;
-	transition: height 30ms, width 30ms, opacity .1s ease-in;
+	transition: opacity 200ms ease-in;
 }
