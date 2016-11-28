@@ -3,6 +3,7 @@ var $ = require('jquery');
 var React = require('react');
 var ReactDOM = require('react-dom');
 var ReactCSSTransitionGroup = require('react-addons-css-transition-group');
+var chineseMatcher = require('./chineseMatcher');
 
 function containsUpperCase(str) {
     return str.toLowerCase() != str;
@@ -10,6 +11,10 @@ function containsUpperCase(str) {
 
 function addMarkupAdvanced (pattern, testStr) {
     var resultList = [];
+    if (chineseMatcher.containsChinese(testStr)) {
+        //if contains chinese first ignore the markup
+        return testStr;
+    }
     addMarkupAdvancedRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
     var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), resultList);
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
@@ -71,6 +76,10 @@ function ifMatch(pattern, testStr) {
 
 function ifMatchCaseSensitive(pattern, testStr){
     var remaining = testStr;
+    if (chineseMatcher.containsChinese(testStr)) {
+        remaining = chineseMatcher.convertStrToPinyin(testStr)[0].toLowerCase();
+        console.log('pinyin: ' + remaining)
+    }
     for (let char of pattern) {
         var pos = remaining.indexOf(char);
         if (pos <= -1) {
@@ -116,9 +125,11 @@ class TabEntry extends React.Component {
     }
 
     render() {
+        var className = "clearFix col-md-10 col-sm-10 col-xs-10 " +
+            (this.props.selected?" tab-selected ":"") + (this.props.current?" tab-current ":"");
         return (
 			<div className="row">
-            	<li className={this.props.selected ? "clearFix tab-selected col-md-10 col-sm-10 col-xs-10" : "clearFix col-md-10 col-sm-10 col-xs-10"}
+            	<li className={ className }
 					onClick={this.handleClick}
 					onMouseOver={this.handleHover}>
                 	<img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
@@ -136,11 +147,20 @@ class TabEntry extends React.Component {
 }
 
 class TabsList extends React.Component {
+    constructor (props){
+        super(props);
+        this.adjustScrollBar = this.adjustScrollBar.bind(this);
+    }
     componentDidMount() {
         this.tabsListDOM = ReactDOM.findDOMNode(this);
+        this.adjustScrollBar();
     }
 
     componentDidUpdate() {
+        this.adjustScrollBar();
+    }
+
+    adjustScrollBar(){
         if (this.selectedTabEntry) {
             var tabsListHeight = this.tabsListDOM.offsetHeight;
             var scrollOffset = this.tabsListDOM.scrollTop;
@@ -160,6 +180,7 @@ class TabsList extends React.Component {
     render() {
         var tabEntrys = R.map((tab) => {
                 let selected = tab.index===this.props.selectedTabIndex?true:false;
+                let current = tab.index===this.props.currentTabIndex?true:false;
                 return <TabEntry
                     tab={tab} key={tab.id}
                     ref={(tabEntry)=>{
@@ -169,6 +190,7 @@ class TabsList extends React.Component {
                     }}
 					handleRemove={this.props.handleRemove}
 					handleHover={this.props.handleHover}
+                    current={current}
                     selected={selected}/>;
             },
             this.props.matchedTabs);
@@ -190,21 +212,18 @@ class InputDisplay extends React.Component {
 class App extends React.Component {
     constructor(props){
         super(props);
-        var background = chrome.extension.getBackgroundPage();
         //some init works
-        if (background) {
-            let allTabs = background.getAllTabs();
-            this.allTabs = allTabs;
+        var backgroundPage = chrome.extension.getBackgroundPage();
+        if (backgroundPage) {
+            let allTabs = backgroundPage.getAllTabs();
+            let currentTabIndex = backgroundPage.getCurrentTabIndex();
             let matchedTabs = R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}), allTabs);
-            this.state = {matchedTabs: matchedTabs, highlightedTabPos: 0, inputText: ''};
+            this.allTabs = allTabs;
+            this.currentTabIndex = currentTabIndex;
+            this.state = {matchedTabs: matchedTabs, highlightedTabPos: currentTabIndex, inputText: ''};
         } else {
             this.state = {matchedTabs: [], highlightedTabPos: 0, inputText: ''};
         }
-        chrome.tabs.getSelected((tab) => {
-            //TODO: getSelected methos is deprecated. Replace it
-            this.currentTabIndex = tab.index;
-            this.setState({highlightedTabPos: tab.index});
-        });
 
 		//method binding
         this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -255,8 +274,8 @@ class App extends React.Component {
     handleRemove(tabId) {
         chrome.tabs.remove(tabId);
 		chrome.tabs.onRemoved.addListener((tabId)=>{
-            let background = chrome.extension.getBackgroundPage();
-            background.getAllTabsOfCurrentWindow((allTabs) => {
+            let backgroundPage = chrome.extension.getBackgroundPage();
+            backgroundPage.getAllTabsOfCurrentWindow((allTabs) => {
                 this.allTabs = allTabs;
                 var matchedTabs =  this.updateMatchedTabs(this.inputText);
                 if (matchedTabs.length <= this.state.highlightedTabPos) {
@@ -297,7 +316,6 @@ class App extends React.Component {
     }
 
     handleInputChange(e) {
-		console.log('current pos is: ' + this.state.highlightedTabPos);
 		var oldInputText = this.inputText;
 		var newInputText = e.target.value;
 
@@ -340,6 +358,7 @@ class App extends React.Component {
                         matchedTabs={this.state.matchedTabs}
 						handleRemove={this.handleRemove}
 						handleHover={this.handleHover}
+                        currentTabIndex = {this.currentTabIndex}
                         selectedTabIndex={(this.state.matchedTabs.length > this.state.highlightedTabPos)?this.state.matchedTabs[this.state.highlightedTabPos].index:0}/>
                 </div>
 			</ReactCSSTransitionGroup>);

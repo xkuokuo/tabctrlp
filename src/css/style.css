@@ -40,6 +40,10 @@ li {
 	background-color: #E3F2FD;
 }
 
+.tab-current .tab-title{
+    color: #0D47A1;
+}
+
 .tab-title mark {
 	background-color: #BBDEFB;
 }

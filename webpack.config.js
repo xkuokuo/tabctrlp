@@ -4,7 +4,6 @@ var CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
     entry: {
         menu: "./src/js/menu.jsx",
-        content: "./src/js/content.js",
         background: "./src/js/background.js",
     },
     output: {

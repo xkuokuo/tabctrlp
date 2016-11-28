@@ -4,7 +4,7 @@
   "description": "A chrome plugin supposed to work like the lovely vim ctrlp.",
   "main": "menu.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha --use_strict",
     "build": "webpack",
     "clean": "rm -r build/*"
   },
@@ -25,10 +25,12 @@
     "babel-preset-react": "^6.16.0",
     "clean-webpack-plugin": "^0.1.14",
     "copy-webpack-plugin": "^4.0.1",
+    "mocha": "^3.2.0",
     "webpack": "^1.13.3"
   },
   "dependencies": {
     "jquery": "^3.1.1",
+    "pinyin": "^2.8.0",
     "ramda": "^0.22.1",
     "react": "^15.4.0",
     "react-addons-css-transition-group": "^15.4.0",

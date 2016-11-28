@@ -11,10 +11,6 @@
     "default_icon": "./img/icon.png",
     "default_popup": "./html/popup.html"
   },
-  "content_scripts": [{
-    "matches": ["https://*/", "http://*/"],
-    "js": ["./js/content.js"]
-  }],
   "permissions": [
     "tabs",
     "activeTab",
