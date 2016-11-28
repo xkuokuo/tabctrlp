@@ -52,3 +52,12 @@ describe('chineseMatcher', function() {
         });
     });
 });
+
+describe('chineseMatcher', function() {
+    describe('#addMarkups()', function() {
+        it('should return "<markup>我</markup>吃了" given the str"我吃了" and the pattern wo', function() {
+            console.log(chineseMatcher.addMarkups('wo',"我吃了"));
+            //assert.equal('<markup>我</markup>吃了', chineseMatcher.addMarkups('wo',"我吃了"));
+        });
+    });
+});

@@ -67,6 +67,11 @@ function addMarkupAdvancedRecursive(pattern, testStr, partialRes, resultList, ca
 }
 
 function ifMatch(pattern, testStr) {
+
+    if (chineseMatcher.containsChinese(testStr)) {
+        testStr = chineseMatcher.convertStrToPinyin(testStr)[0];
+    }
+
     if (containsUpperCase(pattern)) {
         return ifMatchCaseSensitive(pattern, testStr);
     } else {
@@ -76,10 +81,6 @@ function ifMatch(pattern, testStr) {
 
 function ifMatchCaseSensitive(pattern, testStr){
     var remaining = testStr;
-    if (chineseMatcher.containsChinese(testStr)) {
-        remaining = chineseMatcher.convertStrToPinyin(testStr)[0].toLowerCase();
-        console.log('pinyin: ' + remaining)
-    }
     for (let char of pattern) {
         var pos = remaining.indexOf(char);
         if (pos <= -1) {

@@ -1,3 +1,4 @@
+var R = require('ramda');
 var pinyin = require('pinyin');
 
 function containsUpperCase(str) {
@@ -17,27 +18,6 @@ function isChineseChar(char) {
         return true;
     }
     return false;
-}
-
-//still consider case sensitiveity
-function ifMatch(pattern, testStr) {
-    if (containsUpperCase(pattern)) {
-        return ifMatchCaseSensitive(pattern, testStr);
-    } else {
-        return ifMatchCaseSensitive(pattern, testStr.toLowerCase());
-    }
-}
-
-function ifMatchCaseSensitive(pattern, testStr){
-    var remaining = testStr;
-    for (let char of pattern) {
-        var pos = remaining.indexOf(char);
-        if (pos <= -1) {
-            return false;
-        }
-        remaining = remaining.substring(pos+1);
-    }
-    return true;
 }
 
 function convertChineseCharToPinyin(chineseChar){
@@ -61,7 +41,7 @@ function convertStrToPinyinRecursive(chineseStr, partialResult, resultsArr) {
         //convert to pinyin
         let pinyins = pinyin(char, {heteronym: true, style: pinyin.STYLE_NORMAL})[0];
         for (let pinyin of pinyins ) {
-            var capitalPinyin = pinyin.charAt(0).toUpperCase() + pinyin.substring(1);
+            var capitalPinyin = ' ' + pinyin.charAt(0).toUpperCase() + pinyin.substring(1) + ' ';
             convertStrToPinyinRecursive(chineseStr.substring(1), partialResult+capitalPinyin, resultsArr)
         }
         //for ever case
@@ -71,8 +51,129 @@ function convertStrToPinyinRecursive(chineseStr, partialResult, resultsArr) {
     }
 }
 
+function ifMatch(pattern, testStr) {
+
+    if (containsChinese(testStr)) {
+        testStr = convertStrToPinyin(testStr)[0];
+    }
+
+    if (containsUpperCase(pattern)) {
+        return ifMatchCaseSensitive(pattern, testStr);
+    } else {
+        return ifMatchCaseSensitive(pattern, testStr.toLowerCase());
+    }
+}
+
+function ifMatchCaseSensitive(pattern, testStr) {
+    var remaining = testStr;
+    for (let char of pattern) {
+        var pos = remaining.indexOf(char);
+        if (pos <= -1) {
+            return false;
+        }
+        remaining = remaining.substring(pos+1);
+    }
+    return true;
+}
+
+function addMarkups(pattern, testStr) {
+    var originalStr = testStr;
+    testStr = convertStrToPinyin(testStr)[0];
+    var resultsArr = []
+    addMarkupsRecursive(pattern, testStr.trim(), '', resultsArr);
+    var splitedOriginalStr = splitByChineseChar(originalStr.trim());
+    var splitedResultsArr = R.map((result)=> result.trim().split(/\s+/), resultsArr);
+
+    var markedResultArr = []
+
+    for (let splitedResult of splitedResultsArr) {
+        console.log(originalStr);
+        console.log(splitedResult);
+        console.log(splitedOriginalStr);
+        if (splitedOriginalStr.length == splitedResult.length) {
+            for (let j = 0; j < splitedOriginalStr.length; j ++) {
+                if (containsChinese(splitedOriginalStr[j]) && splitedResult[j].match(/<mark>/)) {
+                    splitedResult[j]  = '<mark>' + splitedOriginalStr[j] + '</mark>';
+                } else {
+                    splitedResult[j]  = splitedOriginalStr[j];
+                }
+            }
+            markedResultArr.push(splitedResult.join(' '));
+        }
+    }
+    var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), markedResultArr);
+    var numOfMarksCount = R.map(countMarkTag, mergedResultList);
+    return mergedResultList[findMinIndex(numOfMarksCount)]
+}
+
+function countMarkTag(str) {
+    if (str)
+        return (str.match(/<mark>/g)||[]).length;
+    else
+        return 0;
+}
+
+function findMinIndex(arr) {
+    var minIndex = 0;
+    for (let i = 0; i < arr.length; i++){
+        if (arr[i]< arr[minIndex]) {
+            minIndex = i;
+        }
+    }
+    return minIndex;
+}
+
+function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensitive) {
+    if (pattern.length === 0) {
+        //base case, find a solution
+        resultList.push(partialRes + testStr);
+        return;
+    }
+    if (!ifMatch(pattern, testStr)) {
+        return;
+    }
+    var remaining = caseSensitive ? testStr : testStr.toLowerCase();
+    var remainingOriginal  = testStr;
+    while(remaining.length >= pattern.length) {
+        var pos = remaining.indexOf(pattern.charAt(0));
+        if (pos <= -1) {
+            return;        //not a potential solution
+        }
+        //add/mark the result to partial res and go ahead (recursive call)
+        var newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
+            '<mark>' + remainingOriginal.charAt(pos) + '</mark>';
+        addMarkupsRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList, caseSensitive);
+        //ignore the result, move remaining to a new position, move partialRes to a new position
+        partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
+        remaining = remaining.substring(pos+1);
+        remainingOriginal = remainingOriginal.substring(pos+1);
+    }
+    return;
+}
+
+function splitByChineseChar(str){
+    var resultArr = [];
+    var prevChars = '';
+    for (let char of str) {
+        if (isChineseChar(char)) {
+            if (prevChars) {
+                resultArr.push(prevChars)
+                prevChars='';
+            }
+            resultArr.push(char)
+        } else if (char === ' ') {
+            resultArr.push(prevChars)
+            prevChars = '';
+        } else {
+            prevChars = prevChars + char;
+        }
+    }
+    return resultArr;
+}
+
 module.exports = {
     convertChineseCharToPinyin: convertChineseCharToPinyin,
     containsChinese: containsChinese,
-    convertStrToPinyin: convertStrToPinyin
+    convertStrToPinyin: convertStrToPinyin,
+    addMarkups: addMarkups
 }
