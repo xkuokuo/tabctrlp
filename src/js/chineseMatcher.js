@@ -106,11 +106,6 @@ function addMarkups(pattern, testStr) {
     var splitedResultsArr = R.map((result)=> R.filter((ele)=>ele, result.split(delimiter)), resultsArr);
     var markedResultArr = []
 
-    console.log('开始');
-    for (let splitedResult of splitedResultsArr) {
-        console.log(splitedResult);
-    }
-
     for (let splitedResult of splitedResultsArr) {
         if (splitedOriginalStr.length == splitedResult.length) {
             for (let j = 0; j < splitedOriginalStr.length; j ++) {
