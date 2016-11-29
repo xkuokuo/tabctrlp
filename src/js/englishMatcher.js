@@ -9,7 +9,11 @@ function addMarkups (pattern, testStr) {
     addMarkupRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
     var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), resultList);
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    return mergedResultList[findMinIndex(numOfMarksCount)]
+    if (mergedResultList.length > 0) {
+        return mergedResultList[findMinIndex(numOfMarksCount)]
+    } else {
+        return [];
+    }
 }
 
 function countMarkTag(str) {
@@ -35,9 +39,7 @@ function addMarkupRecursive(pattern, testStr, partialRes, resultList, caseSensit
         resultList.push(partialRes + testStr);
         return;
     }
-    if (!ifMatch(pattern, testStr)) {
-        return;
-    }
+
     var remaining = caseSensitive ? testStr : testStr.toLowerCase();
     var remainingOriginal  = testStr;
     while(remaining.length >= pattern.length) {
@@ -57,27 +59,6 @@ function addMarkupRecursive(pattern, testStr, partialRes, resultList, caseSensit
     return;
 }
 
-function ifMatch(pattern, testStr) {
-    if (containsUpperCase(pattern)) {
-        return ifMatchCaseSensitive(pattern, testStr);
-    } else {
-        return ifMatchCaseSensitive(pattern, testStr.toLowerCase());
-    }
-}
-
-function ifMatchCaseSensitive(pattern, testStr){
-    var remaining = testStr;
-    for (let char of pattern) {
-        var pos = remaining.indexOf(char);
-        if (pos <= -1) {
-            return false;
-        }
-        remaining = remaining.substring(pos+1);
-    }
-    return true;
-}
-
 module.exports = {
     addMarkups: addMarkups,
-    ifMatch: ifMatch
 }

@@ -56,73 +56,50 @@ function convertStrToPinyinRecursive(chineseStr, partialResult, resultsArr, deli
     }
 }
 
-function ifMatchEnglishChars(pattern, testStr) {
-    var testStrsArr;
-    if (!containsUpperCase(pattern)) {
-        testStr = testStr.toLowerCase();
-    }
-    return ifMatchCaseSensitive(pattern, testStr);
-}
-
-function ifMatch(pattern, testStr) {
-    var testStrsArr;
-    if (containsChinese(testStr)) {
-        testStrsArr = convertStrToPinyin(testStr);
-    }
-
-    for (let testStr of testStrsArr){
-        if (!containsUpperCase(pattern)) {
-            testStr = testStr.toLowerCase();
-        }
-        if (ifMatchCaseSensitive(pattern, testStr)){
-            return true;
-        }
-    }
-    return false;
-}
-
-
-function ifMatchCaseSensitive(pattern, testStr) {
-    var remaining = testStr;
-    for (let char of pattern) {
-        var pos = remaining.indexOf(char);
-        if (pos <= -1) {
-            return false;
-        }
-        remaining = remaining.substring(pos+1);
-    }
-    return true;
-}
-
 function addMarkups(pattern, testStr) {
     var originalStr = testStr;
     var delimiter = "中"
     var testStrsArr = convertStrToPinyin(testStr, delimiter);
     var resultsArr = []
-    for (let testStr of testStrsArr) {
+    //for (let testStr of testStrsArr) {
+    testStr = testStrsArr[0];
         addMarkupsRecursive(pattern, testStr.trim(), '', resultsArr, containsUpperCase(pattern));
-    }
+    //}
     var splitedOriginalStr = splitByChineseChar(originalStr.trim());
     var splitedResultsArr = R.map((result)=> R.filter((ele)=>ele, result.split(delimiter)), resultsArr);
     var markedResultArr = []
 
     for (let splitedResult of splitedResultsArr) {
         if (splitedOriginalStr.length == splitedResult.length) {
+            var validPinyinMark = true;
             for (let j = 0; j < splitedOriginalStr.length; j ++) {
-                let haveChineseChar = containsChinese(splitedOriginalStr[j]);
-                if (haveChineseChar && splitedResult[j].match(/<mark>/)) {
+                //some pinyin marks are not valid for pinyin, so just ignore them
+                let hasChineseChar = containsChinese(splitedOriginalStr[j]);
+                let hasMark = splitedResult[j].indexOf('<mark>')>=0;
+                if (hasChineseChar &&
+                    splitedResult[j].indexOf('<mark>')===0 &&
+                    (splitedResult[j].match(/<mark>/g)||[]).length === ((splitedResult[j].match(/<\/mark><mark>/g) || []).length+1)) {
                     splitedResult[j]  = '<mark>' + splitedOriginalStr[j] + '</mark>';
-                } else if (haveChineseChar) {
+                } else if (hasChineseChar && hasMark) {
+                    validPinyinMark = false;
+                    break;
+                }else if (hasChineseChar) {
                     splitedResult[j]  = splitedOriginalStr[j];
                 }
             }
-            markedResultArr.push(splitedResult.join(''));
+            if (validPinyinMark) {
+                markedResultArr.push(splitedResult.join(''));
+            }
         }
     }
 
     var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), markedResultArr);
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    return mergedResultList[findMinIndex(numOfMarksCount)]
+    if (mergedResultList.length > 0) {
+        return mergedResultList[findMinIndex(numOfMarksCount)];
+    } else {
+        return [];
+    }
 }
 
 function countMarkTag(str) {
@@ -146,9 +123,6 @@ function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensi
     if (pattern.length === 0) {
         //base case, find a solution
         resultList.push(partialRes + testStr);
-        return;
-    }
-    if (!ifMatchEnglishChars(pattern, testStr)) {
         return;
     }
     var remaining = caseSensitive ? testStr : testStr.toLowerCase();
@@ -195,5 +169,4 @@ module.exports = {
     containsChinese: containsChinese,
     convertStrToPinyin: convertStrToPinyin,
     addMarkups: addMarkups,
-    ifMatch: ifMatch
 }

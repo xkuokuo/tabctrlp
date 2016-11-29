@@ -11,9 +11,7 @@ function containsUpperCase(str) {
 }
 
 function addMarkups(pattern, testStr) {
-    var resultList = [];
     if (chineseMatcher.containsChinese(testStr)) {
-        //if contains chinese first ignore the markup
         return chineseMatcher.addMarkups(pattern, testStr);
     } else {
         return englishMatcher.addMarkups(pattern, testStr);
@@ -25,33 +23,6 @@ function countMarkTag(str) {
         return (str.match(/<mark>/g)||[]).length;
     else
         return 0;
-}
-
-function ifMatch(pattern, testStr) {
-
-    if (chineseMatcher.containsChinese(testStr)) {
-        return chineseMatcher.ifMatch(pattern, testStr);
-    } else {
-        return englishMatcher.ifMatch(pattern, testStr);
-    }
-
-    if (containsUpperCase(pattern)) {
-        return ifMatchCaseSensitive(pattern, testStr);
-    } else {
-        return ifMatchCaseSensitive(pattern, testStr.toLowerCase());
-    }
-}
-
-function ifMatchCaseSensitive(pattern, testStr){
-    var remaining = testStr;
-    for (let char of pattern) {
-        var pos = remaining.indexOf(char);
-        if (pos <= -1) {
-            return false;
-        }
-        remaining = remaining.substring(pos+1);
-    }
-    return true;
 }
 
 class TabModel {
@@ -257,7 +228,9 @@ class App extends React.Component {
     updateMatchedTabs(inputText){
 		var matchedTabs;
         if (inputText) {
-            var curriedIfMatch = R.curry(ifMatch)(inputText);
+            var ifContainsMarkup = (str) => {
+                return str.indexOf('<mark>') >= 0;
+            }
             matchedTabs = R.sort((tab1, tab2) => {
                     let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
                     if (markCount != 0) {
@@ -266,8 +239,8 @@ class App extends React.Component {
                         return tab1.title.indexOf('<mark>') - tab2.title.indexOf('<mark>');
                     }
                 },
-                R.map((tab) => ( new TabModel({title: addMarkups(inputText, tab.title), id: tab.id, index: tab.index, favIconUrl: tab.favIconUrl})),
-                    R.filter((tab) => curriedIfMatch(tab.title),
+                R.filter((tab) => ifContainsMarkup(tab.title),
+                    R.map((tab) => ( new TabModel({title: addMarkups(inputText, tab.title), id: tab.id, index: tab.index, favIconUrl: tab.favIconUrl})),
                         R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}),
                             this.allTabs))));
             this.setState({matchedTabs: matchedTabs});
