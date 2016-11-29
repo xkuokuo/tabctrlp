@@ -13,7 +13,7 @@ function addMarkupAdvanced (pattern, testStr) {
     var resultList = [];
     if (chineseMatcher.containsChinese(testStr)) {
         //if contains chinese first ignore the markup
-        return testStr;
+        return chineseMatcher.addMarkups(pattern, testStr);
     }
     addMarkupAdvancedRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
     var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), resultList);
@@ -69,7 +69,7 @@ function addMarkupAdvancedRecursive(pattern, testStr, partialRes, resultList, ca
 function ifMatch(pattern, testStr) {
 
     if (chineseMatcher.containsChinese(testStr)) {
-        testStr = chineseMatcher.convertStrToPinyin(testStr)[0];
+        return chineseMatcher.ifMatch(pattern, testStr);
     }
 
     if (containsUpperCase(pattern)) {
@@ -127,7 +127,7 @@ class TabEntry extends React.Component {
 
     render() {
         var className = "clearFix col-md-10 col-sm-10 col-xs-10 " +
-            (this.props.selected?" tab-selected ":"") + (this.props.current?" tab-current ":"");
+            (this.props.selected?" tab-selected ":"");
         return (
 			<div className="row">
             	<li className={ className }
@@ -181,7 +181,7 @@ class TabsList extends React.Component {
     render() {
         var tabEntrys = R.map((tab) => {
                 let selected = tab.index===this.props.selectedTabIndex?true:false;
-                let current = tab.index===this.props.currentTabIndex?true:false;
+                //let current = tab.index===this.props.currentTabIndex?true:false;
                 return <TabEntry
                     tab={tab} key={tab.id}
                     ref={(tabEntry)=>{
@@ -191,7 +191,6 @@ class TabsList extends React.Component {
                     }}
 					handleRemove={this.props.handleRemove}
 					handleHover={this.props.handleHover}
-                    current={current}
                     selected={selected}/>;
             },
             this.props.matchedTabs);

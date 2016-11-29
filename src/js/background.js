@@ -37,10 +37,13 @@ function getAllTabsOfWindow(windowId, callback) {
 
 document.addEventListener('DOMContentLoaded', function(){
     console.log("Background loaded");
+
+    chrome.tabs.onRemoved.addListener(setAllTabs);
     chrome.tabs.onUpdated.addListener(setAllTabs);
     chrome.tabs.onActivated.addListener(updateCurrentTabIndex);
     chrome.tabs.onHighlighted.addListener(updateCurrentTabIndex);
     chrome.windows.onFocusChanged.addListener(setAllTabs);
+
     if (!window.getAllTabs){
         window.getAllTabs= getAllTabs;
     }
