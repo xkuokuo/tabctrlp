@@ -1,15 +1,18 @@
 var R = require('ramda');
-
+var count = 0;
 function containsUpperCase(str) {
     return str.toLowerCase() != str;
 }
 
 function addMarkups (pattern, testStr) {
+    count = 0;
     var resultList = [];
-    addMarkupRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
-    var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), resultList);
+    addMarkupsRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
+    var mergedResultList = resultList;
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
+    console.log("English count is " + count);
     if (mergedResultList.length > 0) {
+        console.log("mergedResultList is " + mergedResultList[findMinIndex(numOfMarksCount)]);
         return mergedResultList[findMinIndex(numOfMarksCount)]
     } else {
         return [];
@@ -33,24 +36,46 @@ function findMinIndex(arr) {
     return minIndex;
 }
 
-function addMarkupRecursive(pattern, testStr, partialRes, resultList, caseSensitive) {
+function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensitive) {
     if (pattern.length === 0) {
         //base case, find a solution
         resultList.push(partialRes + testStr);
         return;
     }
-
+    var beginingMark = '<mark>';
+    var endingMark = '<\/mark>';
     var remaining = caseSensitive ? testStr : testStr.toLowerCase();
     var remainingOriginal  = testStr;
+    count = count + 1;
     while(remaining.length >= pattern.length) {
+        var ifPartialResEndsWithMark = partialRes.endsWith(endingMark);
+        //if could early terminate all the recursive calls
+        if (resultList.length > 0) {
+            for (let result of resultList) {
+                if (result.length <= partialRes.length + remaining.length + ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length)) {
+                    /*
+                    console.log("Aborted?")
+                    console.log("result" + result)
+                    console.log("partialRes" + partialRes);
+                    */
+                    return;
+                }
+            }
+        }
         var pos = remaining.indexOf(pattern.charAt(0));
         if (pos <= -1) {
             return;        //not a potential solution
         }
         //add/mark the result to partial res and go ahead (recursive call)
-        var newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
-            '<mark>' + remainingOriginal.charAt(pos) + '</mark>';
-        addMarkupRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList, caseSensitive);
+        var newPartialRes;
+        if (ifPartialResEndsWithMark && pos === 0){
+            newPartialRes = partialRes.substring(0, partialRes.length-endingMark.length) +
+                 remainingOriginal.charAt(0) + endingMark;
+        } else {
+            newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
+                beginingMark + remainingOriginal.charAt(pos) + endingMark;
+        }
+        addMarkupsRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList, caseSensitive);
         //ignore the result, move remaining to a new position, move partialRes to a new position
         partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
         remaining = remaining.substring(pos+1);
