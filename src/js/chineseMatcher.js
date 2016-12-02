@@ -1,22 +1,10 @@
 var R = require('ramda');
 var pinyin = require('pinyin');
 var count = 0;
+var recursiveLimit = 2000;
 
 function containsUpperCase(str) {
     return str.toLowerCase() != str;
-}
-
-function aggressiveMatch(pattern, testStr) {
-    var remaining = containsUpperCase(pattern)?testStr:testStr.toLowerCase();
-    var pos;
-    for (let char of pattern) {
-        pos = remaining.indexOf(char);
-        if (pos < 0) {
-            return false;
-        }
-        remaining = remaining.substring(pos+1);
-    }
-    return true;
 }
 
 function containsChinese(str){
@@ -71,11 +59,11 @@ function convertStrToPinyinRecursive(chineseStr, partialResult, resultsArr, deli
 }
 
 function addMarkupsChinese(pattern, testStr) {
+    count = 0;
     var resultsArr = []
     addMarkupsChineseRecursive(pattern, testStr, '', resultsArr, containsUpperCase(pattern));
     var mergedResultList = resultsArr;
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    console.log("recursive count for chinese matcher is " + count);
     if (mergedResultList.length > 0) {
         return mergedResultList[findMinIndex(numOfMarksCount)]
     } else {
@@ -92,14 +80,10 @@ function addMarkupsChineseRecursive(pattern, testStr, partialRes, resultsArr, ca
     var endingMark = '<\/mark>';
     var remaining = caseSensitive ? testStr : testStr.toLowerCase();
     var remainingOriginal  = testStr;
-    /*
-    console.log("Remaining: " + remaining)
-    console.log("pattern: " + pattern)
-    */
-    //while(remaining.length >= pattern.length) {
-    while(remaining.length >= 0) {
+
+    while(remaining.length > 0) {
         var ifPartialResEndsWithMark = partialRes.endsWith(endingMark);
-        /*
+        //terminate early if there is already better solutions
         if (resultsArr.length > 0) {
             for (let result of resultsArr) {
                 if (result.length <= partialRes.length + remaining.length + (ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length))) {
@@ -107,34 +91,23 @@ function addMarkupsChineseRecursive(pattern, testStr, partialRes, resultsArr, ca
                 }
             }
         }
-        */
+
         count = count + 1;
 
+        if (count > recursiveLimit) {
+            return; //too much recursive calls, would impact user experience.
+        }
         var pos = -1;
         for (let i = 0; i < remaining.length; i ++) {
             if (isChineseChar(remaining.charAt(i))) {
-                /*
-                    for each pinyin case, check if this cahr could match
-                    if have match(s), call next recursive(s)
-                    and nomatter match or not, skip this chineseChar
-                */
+                //for each pinyin case, check if this cahr could match
+                //if have match(s), call next recursive(s)
+                //and no matter match or not, skip this chineseChar
                 R.forEach((pinyin) => {
                     for (let j = 0; j < pattern.length && j < pinyin.length; j++) {
                         let ifCharMatch = (pattern.charAt(j) == pinyin.charAt(j));
-                        /*
-                        console.log("char: " + remaining.charAt(i));
-                        console.log("pinyin: " + pinyin);
-                        console.log("pattern[]: " + pattern);
-                        console.log("partialRes: " + partialRes);
-                        console.log("ifCharMatch: " + ifCharMatch);
-                        console.log("ifConditionMatch: " +(ifCharMatch && (j===(pattern.length-1) || j===(pinyin.length-1))));
-                        */
                         if ((ifCharMatch && (j===(pattern.length-1) || j===(pinyin.length-1)))|| ((!ifCharMatch) && j != 0)) {
                             //find a match
-                            /*
-                            if(j===(pattern.length-1) && j===(pinyin.length-1))
-                                console.log("FUCK")
-                                */
                             pos = i;
                             let patternPos =ifCharMatch?j:(j-1);
                             let newPartialRes;
@@ -145,7 +118,7 @@ function addMarkupsChineseRecursive(pattern, testStr, partialRes, resultsArr, ca
                                 newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
                                     beginingMark + remainingOriginal.charAt(pos) + endingMark;
                             }
-                            addMarkupsChineseRecursive(pattern.substring(patternPos+1), remaining.substring(pos+1), newPartialRes, resultsArr, caseSensitive)
+                            addMarkupsChineseRecursive(pattern.substring(patternPos+1), remainingOriginal.substring(pos+1), newPartialRes, resultsArr, caseSensitive)
                             break;
                         } else if (pattern.charAt(j) != pinyin.charAt(j) && j == 0) {
                             //not a match,
@@ -159,6 +132,7 @@ function addMarkupsChineseRecursive(pattern, testStr, partialRes, resultsArr, ca
                     break;
                 }
             } else if (remaining.charAt(i) === pattern.charAt(0)) {
+                //plain english char matching mode
                 pos = i;
                 var newPartialRes;
                 if (ifPartialResEndsWithMark && pos === 0){
@@ -176,12 +150,20 @@ function addMarkupsChineseRecursive(pattern, testStr, partialRes, resultsArr, ca
         }
 
         if (pos === -1 ) {
-            return;        //not a potential solution
+            return;        //no match char found, not even a potential solution
         }
-        //ignore the result, move remaining to a new position, move partialRes to a new position
+        if (resultsArr.length === 0 && !isChineseChar(remaining.charAt(pos))) {
+            //that means previous sets of recursive calls didn't find any match
+            //Need to check if previous matched char is a chinese char
+            //Since for chinese pinyin we can't match aggresively like english,
+            //Because pinyin has rules
+            return;
+        }
+        //ignore the matching result, move remaining to a new position, move partialRes to a new position
         partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
         remaining = remaining.substring(pos+1);
         remainingOriginal = remainingOriginal.substring(pos+1);
+
     }
     return;
 }
@@ -201,76 +183,6 @@ function findMinIndex(arr) {
         }
     }
     return minIndex;
-}
-
-/*
-function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensitive, delimiter) {
-    if (pattern.length === 0) {
-        //base case, find a solution
-        resultList.push(partialRes + testStr);
-        return;
-    }
-    if (!aggressiveMatch(pattern, testStr)) {
-        return;
-    }
-    var remaining = caseSensitive ? testStr : testStr.toLowerCase();
-    var remainingOriginal  = testStr;
-    var beginingMark = '<mark>';
-    var endingMark = '<\/mark>';
-    count  = count + 1;
-    while(remaining.length >= pattern.length) {
-        var ifPartialResEndsWithMark = partialRes.endsWith(endingMark);
-        //if could early terminate all the recursive calls
-        if (resultList.length > 0) {
-            for (let result of resultList) {
-                if (result.length <= partialRes.length + remaining.length + ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length)) {
-                    return;
-                }
-            }
-        }
-
-        var pos = remaining.indexOf(pattern.charAt(0));
-        if (pos <= -1) {
-            return;        //not a potential solution
-        }
-        //add/mark the result to partial res and go ahead (recursive call)
-        var newPartialRes;
-        if (ifPartialResEndsWithMark && pos === 0){
-            newPartialRes = partialRes.substring(0, partialRes.length-endingMark.length) +
-                 remainingOriginal.charAt(0) + endingMark;
-        } else {
-            newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
-                beginingMark + remainingOriginal.charAt(pos) + endingMark;
-        }
-
-        addMarkupsRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList, caseSensitive);
-        //ignore the result, move remaining to a new position, move partialRes to a new position
-        partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
-        remaining = remaining.substring(pos+1);
-        remainingOriginal = remainingOriginal.substring(pos+1);
-    }
-    return;
-}
-*/
-
-function splitByChineseChar(str){
-    var resultArr = [];
-    var prevChars = '';
-    for (let char of str) {
-        if (isChineseChar(char)) {
-            if (prevChars) {
-                resultArr.push(prevChars)
-                prevChars='';
-            }
-            resultArr.push(char)
-        } else {
-            prevChars = prevChars + char;
-        }
-    }
-    if (prevChars) {
-        resultArr.push(prevChars)
-    }
-    return resultArr;
 }
 
 module.exports = {
