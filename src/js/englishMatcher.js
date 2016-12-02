@@ -6,11 +6,10 @@ function containsUpperCase(str) {
 
 function addMarkups (pattern, testStr) {
     count = 0;
-    var resultList = [];
-    addMarkupsRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
-    var mergedResultList = resultList;
+    var resultsArr = [];
+    addMarkupsRecursive(pattern, testStr, '', resultsArr, containsUpperCase(pattern));
+    var mergedResultList = resultsArr;
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    //console.log("English count is " + count);
     if (mergedResultList.length > 0) {
         return mergedResultList[findMinIndex(numOfMarksCount)]
     } else {
@@ -48,10 +47,10 @@ function findMinIndex(arr) {
     return minIndex;
 }
 
-function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensitive) {
+function addMarkupsRecursive(pattern, testStr, partialRes, resultsArr, caseSensitive) {
     if (pattern.length === 0) {
         //base case, find a solution
-        resultList.push(partialRes + testStr);
+        resultsArr.push(partialRes + testStr);
         return;
     }
     if (!aggressiveMatch(pattern, testStr)) {
@@ -65,8 +64,8 @@ function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensi
 
     while(remaining.length >= pattern.length) {
         var ifPartialResEndsWithMark = partialRes.endsWith(endingMark);
-        if (resultList.length > 0) {
-            for (let result of resultList) {
+        if (resultsArr.length > 0) {
+            for (let result of resultsArr) {
                 if (result.length <= partialRes.length + remaining.length + (ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length))) {
                     return;
                 }
@@ -87,7 +86,7 @@ function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensi
             newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
                 beginingMark + remainingOriginal.charAt(pos) + endingMark;
         }
-        addMarkupsRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList, caseSensitive);
+        addMarkupsRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultsArr, caseSensitive);
 
         //ignore the result, move remaining to a new position, move partialRes to a new position
         partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
