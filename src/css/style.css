@@ -65,6 +65,21 @@ li {
     color: #E0E0E0;
 }
 
+input {
+    outline:none;
+    border: 0px solid black;
+}
+
+.input-div-container {
+    line-height: 1;
+}
+
+.input-real {
+    height: 0px;
+    margin: 0px;
+    padding: 0px;
+}
+
 .input-display {
     width: 480px;
     height: 30px;
@@ -78,11 +93,6 @@ img {
     height: 18px;
     margin-top: 1px; 
     margin: 5px;
-}
-
-input:focus {
-    outline:none;
-    border: 0px solid black;
 }
 
 .panel-appear {

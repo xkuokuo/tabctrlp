@@ -138,8 +138,18 @@ class TabsList extends React.Component {
 
 //input display div box
 class InputDisplay extends React.Component {
+    componentDidMount () {
+        var inputComponent = ReactDOM.findDOMNode(this);
+        //inputComponent.type = "text";
+    }
+
     render() {
-        return <input type="text" className="input-display" value={this.props.inputText} onChange={this.props.onChange}/>;
+        return (
+            <div className="input-div-container">
+                <input type="password" tabIndex="0" className="input-real" value={this.props.inputText} onChange={this.props.onChange}/>
+                <input type="text" disabled className="input-display" value={this.props.inputText}/>
+            </div>
+            )
     }
 }
 
@@ -289,7 +299,7 @@ class App extends React.Component {
 			transitionEnter={false}
 		    transitionLeave={false}>
 				<div className="panel container" key={"dummykdy"} onKeyDown={this.handleKeyDown}>
-                 	<InputDisplay tabIndex="0" inputText={this.state.inputText} onChange={this.handleInputChange}/>
+                 	<InputDisplay inputText={this.state.inputText} onChange={this.handleInputChange}/>
                  	<TabsList
                         matchedTabs={this.state.matchedTabs}
 						handleRemove={this.handleRemove}
