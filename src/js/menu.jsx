@@ -138,16 +138,20 @@ class TabsList extends React.Component {
 
 //input display div box
 class InputDisplay extends React.Component {
-    componentDidMount () {
-        var inputComponent = ReactDOM.findDOMNode(this);
-        //inputComponent.type = "text";
-    }
+	constructor(props) {
+		super(props);
+		this.restoreFocus = this.restoreFocus.bind(this);
+	}
+
+	restoreFocus() {
+		this.realInput.focus();
+	}
 
     render() {
         return (
             <div className="input-div-container">
-                <input type="password" tabIndex="0" className="input-real" value={this.props.inputText} onChange={this.props.onChange}/>
-                <input type="text" disabled className="input-display" value={this.props.inputText}/>
+                <input ref={(input)=>{this.realInput = input;}} type="password" tabIndex="0" className="input-real" value={this.props.inputText} onChange={this.props.onChange}/>
+                <input type="text" className="input-display" value={this.props.inputText} onClick={this.restoreFocus}/>
             </div>
             )
     }
@@ -216,6 +220,7 @@ class App extends React.Component {
 	}
 
     handleRemove(tabId) {
+		this.inputDisplay.restoreFocus();
         chrome.tabs.remove(tabId);
 		chrome.tabs.onRemoved.addListener((tabId)=>{
             let backgroundPage = chrome.extension.getBackgroundPage();
@@ -299,7 +304,7 @@ class App extends React.Component {
 			transitionEnter={false}
 		    transitionLeave={false}>
 				<div className="panel container" key={"dummykdy"} onKeyDown={this.handleKeyDown}>
-                 	<InputDisplay inputText={this.state.inputText} onChange={this.handleInputChange}/>
+                 	<InputDisplay ref={(inputDisplay)=>{this.inputDisplay=inputDisplay;}} inputText={this.state.inputText} onChange={this.handleInputChange}/>
                  	<TabsList
                         matchedTabs={this.state.matchedTabs}
 						handleRemove={this.handleRemove}
