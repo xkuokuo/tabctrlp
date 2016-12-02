@@ -10,13 +10,25 @@ function addMarkups (pattern, testStr) {
     addMarkupsRecursive(pattern, testStr, '', resultList, containsUpperCase(pattern));
     var mergedResultList = resultList;
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    console.log("English count is " + count);
+    //console.log("English count is " + count);
     if (mergedResultList.length > 0) {
-        console.log("mergedResultList is " + mergedResultList[findMinIndex(numOfMarksCount)]);
         return mergedResultList[findMinIndex(numOfMarksCount)]
     } else {
         return [];
     }
+}
+
+function aggressiveMatch(pattern, testStr) {
+    var remaining = containsUpperCase(pattern)?testStr:testStr.toLowerCase();
+    var pos;
+    for (let char of pattern) {
+        pos = remaining.indexOf(char);
+        if (pos < 0) {
+            return false;
+        }
+        remaining = remaining.substring(pos+1);
+    }
+    return true;
 }
 
 function countMarkTag(str) {
@@ -42,26 +54,26 @@ function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensi
         resultList.push(partialRes + testStr);
         return;
     }
+    if (!aggressiveMatch(pattern, testStr)) {
+        return;
+    }
     var beginingMark = '<mark>';
     var endingMark = '<\/mark>';
     var remaining = caseSensitive ? testStr : testStr.toLowerCase();
     var remainingOriginal  = testStr;
-    count = count + 1;
+
+
     while(remaining.length >= pattern.length) {
         var ifPartialResEndsWithMark = partialRes.endsWith(endingMark);
-        //if could early terminate all the recursive calls
         if (resultList.length > 0) {
             for (let result of resultList) {
-                if (result.length <= partialRes.length + remaining.length + ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length)) {
-                    /*
-                    console.log("Aborted?")
-                    console.log("result" + result)
-                    console.log("partialRes" + partialRes);
-                    */
+                if (result.length <= partialRes.length + remaining.length + (ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length))) {
                     return;
                 }
             }
         }
+        count = count + 1;
+        //if could early terminate all the recursive calls
         var pos = remaining.indexOf(pattern.charAt(0));
         if (pos <= -1) {
             return;        //not a potential solution
@@ -76,6 +88,7 @@ function addMarkupsRecursive(pattern, testStr, partialRes, resultList, caseSensi
                 beginingMark + remainingOriginal.charAt(pos) + endingMark;
         }
         addMarkupsRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultList, caseSensitive);
+
         //ignore the result, move remaining to a new position, move partialRes to a new position
         partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
         remaining = remaining.substring(pos+1);

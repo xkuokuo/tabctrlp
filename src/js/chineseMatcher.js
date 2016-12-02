@@ -102,7 +102,7 @@ function addMarkups(pattern, testStr) {
 
     var mergedResultList = R.map((res) => res.replace(/<\/mark><mark>/g, ''), markedResultArr);
     var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    console.log("Count is: " + count);
+    //console.log("Count is: " + count);
     if (mergedResultList.length > 0) {
         return mergedResultList[findMinIndex(numOfMarksCount)];
     } else {
