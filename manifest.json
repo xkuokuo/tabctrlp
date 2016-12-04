@@ -1,9 +1,9 @@
 {
   "manifest_version": 2,
 
-  "name": "ChromeCtrlP",
-  "description": "Help searching for tab/window just like the vim ctrlp does with files",
-  "version": "1.0",
+  "name": "Tab CtrlP",
+  "description": "Quick searching for browser tabs, just like what the vim ctrlp plugin does for files. 标签快速模糊搜索，同时支持英文/拼音.",
+  "version": "1.1",
   "background": {
     "scripts": ["./js/background.js"]
   },
