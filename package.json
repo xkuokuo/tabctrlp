@@ -5,7 +5,7 @@
   "main": "menu.js",
   "scripts": {
     "test": "mocha --use_strict",
-    "build": "webpack",
+    "build": "webpack; zip -r ./build/tabctrlp.zip ./build",
     "clean": "rm -r build/*"
   },
   "repository": {
