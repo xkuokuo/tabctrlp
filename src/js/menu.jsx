@@ -186,6 +186,10 @@ class App extends React.Component {
 		this.inputText= '';
     }
 
+    componentDidMount(){
+		this.inputDisplay.restoreFocus();
+    }
+
     getSelectedTabID(){
         return this.state.matchedTabs[this.state.highlightedTabPos].id;
     }
