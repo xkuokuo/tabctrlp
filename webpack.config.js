@@ -3,7 +3,7 @@ var CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
     entry: {
-        menu: "./src/js/menu.jsx",
+        popup: "./src/js/popup.jsx",
         background: "./src/js/background.js",
     },
     output: {
@@ -12,7 +12,7 @@ module.exports = {
     },
 	module: {
 		loaders: [{
-			test: path.join(__dirname, 'src/js/menu.jsx'),
+			test: path.join(__dirname, 'src/js/popup.jsx'),
     		loader: 'babel-loader',
 			query: {
 				presets: ['es2015', 'react']

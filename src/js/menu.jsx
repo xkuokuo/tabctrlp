@@ -6,10 +6,6 @@ var ReactCSSTransitionGroup = require('react-addons-css-transition-group');
 var chineseMatcher = require('./chineseMatcher');
 var englishMatcher = require('./englishMatcher');
 
-function containsUpperCase(str) {
-    return str.toLowerCase() != str;
-}
-
 function addMarkups(pattern, testStr) {
     if (chineseMatcher.containsChinese(testStr)) {
         return chineseMatcher.addMarkups(pattern, testStr);
@@ -39,7 +35,6 @@ class TabEntry extends React.Component {
         super(props);
         this.jumpToTab = this.jumpToTab.bind(this);
         this.handleClick = this.handleClick.bind(this);
-        this.handleRemove = this.handleRemove.bind(this);
         this.handleHover = this.handleHover.bind(this);
     }
 
@@ -74,12 +69,18 @@ class TabEntry extends React.Component {
                 	<p className="hidden">{this.props.tab.id}</p>
             	</li>
 				<div className="col-md-2 col-sm-2 col-xs-2">
-					<button className="btn-remove" onClick={this.handleRemove}>X</button>
+					<button className="btn-remove" onClick={this.props.handleRemove}>X</button>
 				</div>
 			</div>
 		);
     }
 }
+
+/*
+TabEntry.propTypes = {
+    title: React.propTypes.string.isRequired,
+}
+*/
 
 class TabsList extends React.Component {
     constructor (props){

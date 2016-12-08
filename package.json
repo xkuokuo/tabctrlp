@@ -1,8 +1,8 @@
 {
-  "name": "chrome_ctrlp",
+  "name": "tab_ctrlp",
   "version": "1.0.0",
   "description": "A chrome plugin supposed to work like the lovely vim ctrlp.",
-  "main": "menu.js",
+  "main": "pupup.js",
   "scripts": {
     "test": "mocha --use_strict",
     "build": "webpack; zip -r ./build/tabctrlp.zip ./build",
