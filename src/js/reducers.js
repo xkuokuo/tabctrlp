@@ -17,6 +17,7 @@ var englishMatcher = require('./englishMatcher');
 */
 
 var backgroundPage = chrome.extension.getBackgroundPage();
+
 var initState = {
     inputText: '',
     allTabs: backgroundPage.getAllTabs(),
@@ -26,9 +27,19 @@ var initState = {
     selectedTabId: backgroundPage.getAllTabs()[backgroundPage.getCurrentTabIndex()].id
 }
 
+class TabModel {
+    constructor(props) {
+        this.title = props.title;
+        this.id = props.id;
+        this.favIconUrl = props.favIconUrl;
+        this.index = props.index;
+    }
+}
+
 function jumpToTabReducer(state = initState, action) {
     switch (action.type){
         case actions.JUMP_TO_TAB:
+            chrome.tabs.update(state.selectedTabId, {active: true, highlighted:true});
             return state;
         default:
             return state;
@@ -57,14 +68,14 @@ function keyDownReducer(state = initState, action) {
             var selectedTabPos= state.selectedTabPos;
             var newPos = selectedTabPos;
             var selectedTabId = state.selectedTabId;
-            if (e.keyCode == 38) {
+            if (action.keyCode == 38) {
                 newPos = selectedTabPos -1;
                 selectedTabPos = newPos<0 ? state.matchedTabs.length-1 : newPos;
-            } else if (e.keyCode == 40) {
+            } else if (action.keyCode == 40) {
                 newPos = selectedTabPos +1;
                 selectedTabPos = newPos>=state.matchedTabs.length ? 0 : newPos;
             }
-            selectedTabId = state.matchedTabs[selectedTabPos].id;
+            selectedTabId = (state.matchedTabs.length > selectedTabPos)?state.matchedTabs[selectedTabPos].id:0;
             return Object.assign({}, state, {
                 selectedTabPos: selectedTabPos,
                 selectedTabId: selectedTabId
@@ -76,10 +87,11 @@ function keyDownReducer(state = initState, action) {
 
 function inputChangedReducer(state = initState, action) {
     switch (action.type){
-        case actions.INPUT_CHANEGED:
-            var inputText = state.inputText;
+        case actions.INPUT_CHANGED:
+            var inputText = action.inputText;
             var allTabs = state.allTabs;
             var selectedTabPos = state.selectedTabPos;
+            var selectedTabId = state.selectedTabId;
             if (inputText) {
                 var matchedTabs = R.sort((tab1, tab2) => {
                         let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
@@ -98,10 +110,12 @@ function inputChangedReducer(state = initState, action) {
                 matchedTabs = R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}), allTabs);
                 selectedTabPos = state.currentTabIndex;
             }
+            selectedTabId =  (matchedTabs.length>selectedTabPos)?matchedTabs[selectedTabPos].id:0
             return Object.assign({}, state, {
+                inputText: inputText,
                 matchedTabs: matchedTabs,
                 selectedTabPos: selectedTabPos,
-                selectedTabId: (matchedTabs.lenth>selectedTabPos)?matchedTabs[selectedTabPos].id:0
+                selectedTabId: selectedTabId
             });
         default:
             return state;
@@ -142,21 +156,8 @@ function mouseHoveredReducer (state = initState, action){
 }
 
 
-/*
-const appReducer = combineReducers({
-    removeTabReducer,
-    inputChangedReducer,
-    mouseHoveredReducer,
-    keyDownReducer
-})
-*/
 const appReducer = (state = initState, action ) => {
-    console.log("Reducer?")
-    console.log("Action")
-    console.log(action)
-    var new_state = removeTabReducer(inputChangedReducer(mouseHoveredReducer(keyDownReducer(state, action),action),action),action)
-    console.log("new state?")
-    console.log(new_state);
+    var new_state = jumpToTabReducer(removeTabReducer(inputChangedReducer(mouseHoveredReducer(keyDownReducer(state, action),action),action),action),action)
     return new_state;
 }
 

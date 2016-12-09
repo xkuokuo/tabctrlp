@@ -12,26 +12,11 @@ var chineseMatcher = require('./chineseMatcher');
 var englishMatcher = require('./englishMatcher');
 
 
-/*
-let unsubscribe = store.subscribe(() =>
-    console.log(store.getState())
-);
-*/
-
-/*
-store.dispatch(actions.mouseHovered(1));
-store.dispatch(actions.inputChanged('1'));
-store.dispatch(actions.jumpToTab(1));
-store.dispatch(actions.mouseHovered(1));
-store.dispatch(actions.keyDown(1));
-*/
-
 const mapStateToProps = (state) => {
-    console.log(state)
     return {
         states: {
-            inputText: state.inputText,
             allTabs: state.allTabs,
+            inputText: state.inputText,
             matchedTabs: state.matchedTabs,
             currentTabIndex: state.currentTabIndex,
             selectedTabPos: state.selectedTabPos,
@@ -58,7 +43,7 @@ const mapDispatchToProps = (dispatch) => {
             },
             onKeyDown: (keyCode) => {
                 if (keyCode === 13) {
-                    chrome.tabs.update(id, {active: true, highlighted:true});
+                    dispatch(actions.jumpToTab('dumm'));
                 } else {
                     dispatch(actions.keyDown(keyCode));
                 }
@@ -82,7 +67,7 @@ class TabEntry extends React.Component {
         className = className + (this.props.selected?" tab-selected":"");
         return (
             <div className="row">
-                <li className={ '' }
+                <li className={ className }
                     onClick={()=>this.props.onTabClick(this.props.tab.id)}
                     onMouseOver={()=>this.props.onMouseOver(this.props.tab.id)}>
                     <img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
@@ -97,15 +82,6 @@ class TabEntry extends React.Component {
             </div>);
     }
 }
-
-/*
-TabEntry.propTypes = {
-    onClick: React.PropTypes.func.isRequired,
-    onRemove: React.PropTypes.func.isRequired,
-    tab: React.PropTypes.object.isRequired
-}
-*/
-
 
 class TabsList extends React.Component {
     constructor (props){
@@ -139,13 +115,7 @@ class TabsList extends React.Component {
     }
 
     render() {
-        console.log("Ha tabsList ?")
-        console.log("Ha allTabs?" + this.props.allTabs)
-        console.log("Ha selectedTabId?" + this.props.selectedTabId)
-        console.log("Ha currentTabIndex?" + this.props.currentTabIndex)
-        console.log("Ha matchedTabs?" + this.props.matchedTabs)
         var tabEntrys = R.map((tab) => {
-                console.log("Ha tabsList tabentry?")
                 let selected = tab.id===this.props.selectedTabId?true:false;
                 return <TabEntry
                     tab={tab}
@@ -180,43 +150,23 @@ class InputDisplay extends React.Component {
     }
 
     render() {
-        console.log("Hey inputText: " + this.props.inputText)
         return (
             <div className="input-div-container">
-                <input ref={(input)=>{this.realInput = input;}} type="password" tabIndex="0" className="input-real" value={this.props.inputText} onChange={this.props.onInputChanged}/>
-                <input type="text" className="input-display" value={this.props.inputText} onClick={this.restoreFocus}/>
+                <input ref={(input)=>{this.realInput = input;}}
+                    type="password"
+                    tabIndex="0" className="input-real"
+                    value={this.props.inputText}
+                    onChange={(e)=> {
+                            e.persist();
+                            this.props.onInputChanged(e.target.value);
+                        }
+                    }/>
+                <input type="text" className="input-display"
+                    value={this.props.inputText} onClick={this.restoreFocus}/>
             </div>);
     }
 }
 
-/*
-class App extends React.Component {
-    render() {
-        return (<ReactCSSTransitionGroup
-            transitionAppear={true}
-            transitionAppearTimeout={3000}
-            transitionName="panel"
-            transitionEnter={false}
-            transitionLeave={false}>
-            <div className="panel container" key={"dummykdy"}
-                onKeyDown={(event) => this.props.onKeyDown(event.keyCode)}>
-                <InputDisplay
-                    inputText={this.props.inputText}
-                    onChange={this.props.onInputChange}/>
-                <TabsList
-                    onTabRemove={this.props.onTabRemove}
-                    onTabClick={this.props.onTabClick}
-                    onMouseOver={this.props.onMouseOver}
-                    currentTabIndex = {this.props.currentTabIndex}
-                    matchedTabs={this.props.matchedTabs}
-                    selectedTabId={this.props.selectedTabId}/>
-            </div>
-        </ReactCSSTransitionGroup>);
-    }
-}
-*/
-
-//let App = (inputText, currentTabIndex, selectedTabId, matchedTabs, allTabs, onMouseOver, onTabClick, onTabRemove, onInputChanged, onKeyDown) => {
 let App = ({states, actions}) => {
         return (<ReactCSSTransitionGroup
             transitionAppear={true}
@@ -253,14 +203,6 @@ var initState = {
 }
 
 var store = Redux.createStore(appReducer, initState);
-
-/*
-let unsubscribe = store.subscribe(() =>
-  console.log(store.getState())
-)
-
-store.dispatch(actions.jumpToTab(1));
-*/
 
 const RootApp = connect(
       mapStateToProps,

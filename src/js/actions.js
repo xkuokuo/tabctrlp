@@ -29,5 +29,10 @@ module.exports = {
     removeTab: removeTab,
     inputChanged: inputChanged,
     mouseOver : mouseOver,
-    keyDown: keyDown
+    keyDown: keyDown,
+    JUMP_TO_TAB: JUMP_TO_TAB,
+    REMOVE_TAB: REMOVE_TAB,
+    KEY_DOWN: KEY_DOWN,
+    INPUT_CHANGED: INPUT_CHANGED,
+    MOUSE_HOVERED: MOUSE_HOVERED
 }
