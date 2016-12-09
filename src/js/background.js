@@ -35,6 +35,9 @@ function getAllTabsOfWindow(windowId, callback) {
     });
 }
 
+//preload
+setAllTabs();
+
 document.addEventListener('DOMContentLoaded', function(){
     console.log("Background loaded");
 

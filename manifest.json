@@ -3,7 +3,7 @@
 
   "name": "Tab CtrlP",
   "description": "Quick searching for browser tabs, just like what the vim ctrlp plugin does for files. 标签快速模糊搜索，同时支持英文/拼音.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "background": {
     "scripts": ["./js/background.js"]
   },
@@ -24,7 +24,7 @@
   "commands": {
     "_execute_browser_action": {
       "suggested_key": {
-        "default": "Ctrl+P",
+        "default": "Alt+P",
         "windows": "Alt+P",
         "mac": "MacCtrl+P"
       }
