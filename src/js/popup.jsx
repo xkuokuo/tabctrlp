@@ -145,6 +145,10 @@ class InputDisplay extends React.Component {
         this.restoreFocus = this.restoreFocus.bind(this);
     }
 
+    componentDidMount(){
+        this.restoreFocus();
+    }
+
     restoreFocus() {
         this.realInput.focus();
     }
