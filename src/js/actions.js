@@ -9,7 +9,7 @@ function jumpToTab(id) {
 }
 
 function removeTab(id) {
-    return {thpe: REMOVE_TAB, id: id};
+    return {type: REMOVE_TAB, id: id};
 }
 
 function keyDown(keyCode) {
