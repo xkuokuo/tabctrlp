@@ -8,8 +8,6 @@ var ReactDOM = require('react-dom');
 var ReactCSSTransitionGroup = require('react-addons-css-transition-group');
 var actions = require('./actions');
 var appReducer = require('./reducers');
-var chineseMatcher = require('./chineseMatcher');
-var englishMatcher = require('./englishMatcher');
 
 
 const mapStateToProps = (state) => {

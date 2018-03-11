@@ -1,20 +1,7 @@
 const R = require('ramda');
 const combineReducers = require('redux').combineReducers;
 const actions = require('./actions');
-var chineseMatcher = require('./chineseMatcher');
-var englishMatcher = require('./englishMatcher');
-
-/*
-  state definition
-  {
-    allTabs: []
-    matchedTabs: []
-    inputText: ''
-    currentTabIndex: num
-    selectedTabPos: num
-    selectedTabId: num
-  }
-*/
+var textMatcher = require('./textMatcher');
 
 var backgroundPage = chrome.extension.getBackgroundPage();
 
@@ -94,13 +81,13 @@ function inputChangedReducer(state = initState, action) {
             var selectedTabId = state.selectedTabId;
             if (inputText) {
                 var matchedTabs = R.sort((tab1, tab2) => {
-                        let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
-                        if (markCount != 0) {
-                            return markCount;
-                        } else {
-                            return tab1.title.indexOf('<mark>') - tab2.title.indexOf('<mark>');
-                        }
-                    },
+                    let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
+                    if (markCount != 0) {
+                        return markCount;
+                    } else {
+                        return tab1.title.indexOf('<mark>') - tab2.title.indexOf('<mark>');
+                    }
+                },
                     R.filter((tab) => ifContainsMarkup(tab.title),
                         R.map((tab) => ( new TabModel({title: addMarkups(inputText, tab.title), id: tab.id, index: tab.index, favIconUrl: tab.favIconUrl})),
                             R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}),
@@ -123,11 +110,7 @@ function inputChangedReducer(state = initState, action) {
 }
 
 function addMarkups(pattern, testStr) {
-    if (chineseMatcher.containsChinese(testStr)) {
-        return chineseMatcher.addMarkups(pattern, testStr);
-    } else {
-        return englishMatcher.addMarkups(pattern, testStr);
-    }
+    return textMatcher.addMarkups(pattern, testStr);
 }
 
 function ifContainsMarkup (str) {

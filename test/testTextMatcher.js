@@ -1,5 +1,5 @@
 var assert = require('assert');
-var chineseMatcher = require('../src/js/chineseMatcher');
+var textMatcher = require('../src/js/textMatcher');
 
 describe('Array', function() {
     describe('#indexOf()', function() {
@@ -9,20 +9,20 @@ describe('Array', function() {
     });
 });
 
-describe('chineseMatcher', function() {
+describe('textMatcher', function() {
     describe('#matchAgainstChineseStr()', function() {
         it('should return matched chinese char positions', function() {
             var testStr = "我吃了我碗里的肉";
-            assert.deepEqual([ 3, 4 ], chineseMatcher.matchAgainstChineseStr('ww', testStr));
-            assert.deepEqual([ 4, 5, 6, 7 ],  chineseMatcher.matchAgainstChineseStr('wldr', testStr));
-            assert.deepEqual([ 0, 7 ], chineseMatcher.matchAgainstChineseStr('wor', testStr));
+            assert.deepEqual([ 3, 4 ], textMatcher.matchAgainstChineseStr('ww', testStr));
+            assert.deepEqual([ 4, 5, 6, 7 ],  textMatcher.matchAgainstChineseStr('wldr', testStr));
+            assert.deepEqual([ 0, 7 ], textMatcher.matchAgainstChineseStr('wor', testStr));
         });
     });
 
     describe('#addMarkups()', function() {
         it('should return "<mark>我</mark>吃了" given the str"我吃了" and the pattern wo', function() {
-            console.log(chineseMatcher.addMarkups('wo',"我吃了"));
-            assert.equal('<mark>我</mark>吃了', chineseMatcher.addMarkups('wo',"我吃了"));
+            console.log(textMatcher.addMarkups('wo',"我吃了"));
+            assert.equal('<mark>我</mark>吃了', textMatcher.addMarkups('wo',"我吃了"));
         });
     });
 });

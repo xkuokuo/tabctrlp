@@ -37,16 +37,19 @@ function convertChineseCharToPinyin(chineseChar){
 /**
  *
  */
-function addMarkupsToChinese(pattern, testStr, beginingMark = '<mark>', endingMark = '<\/mark>') {
+function addMarkupsToChinese(pattern, testStr, beginingMark='<mark>', endingMark='<\/mark>') {
     var matchedPositions = new Set(matchAgainstChineseStr(pattern, testStr));
     var res = ''
-    for (var i = 0; i < testStr.length; i ++) {
+    // add markups to all matched char
+    for (var i = 0; i < testStr.length; i++) {
         if (matchedPositions.has(i)) {
             res = res + beginingMark + testStr.charAt(i) + endingMark;
         } else {
             res = res + testStr.charAt(i);
         }
     }
+    // remove duplicated marks. This way is so silly but I don't have time to optimize
+    res = res.split(endingMark + beginingMark).join('');
     return res;
 }
 
