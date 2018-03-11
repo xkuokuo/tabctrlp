@@ -28,13 +28,30 @@
         "windows": "Alt+P",
         "mac": "MacCtrl+P"
       }
-    },"goto-last-viewed-tab": {
+    }
+    ,"toggle-last-viewed-tab": {
       "suggested_key": {
         "default": "Alt+6",
         "windows": "Alt+6",
         "mac": "MacCtrl+6"
       },
-      "description": "Toggle between this tab and last viewed tab"
+      "description": "Toggle between this tab and last viewed tab, like Ctrl-^ in vim"
+    }
+    ,"goto-last-viewed-tab": {
+      "suggested_key": {
+        "default": "Alt+O",
+        "windows": "Alt+O",
+        "mac": "MacCtrl+O"
+      },
+      "description": "Go to previous viewed tab, (kind-of) like Ctrl-O in vim"
+    }
+    ,"goto-next-viewed-tab": {
+      "suggested_key": {
+        "default": "Alt+I",
+        "windows": "Alt+I",
+        "mac": "MacCtrl+I"
+      },
+      "description": "Go to next viewed tab, (kind-of) like Ctrl-I in vim"
     }
   }
 }
