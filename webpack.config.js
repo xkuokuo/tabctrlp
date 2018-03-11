@@ -10,15 +10,15 @@ module.exports = {
         path: path.join(__dirname,"build/js"),
         filename: "[name].js"
     },
-	module: {
-		loaders: [{
-			test: path.join(__dirname, 'src/js/popup.jsx'),
-    		loader: 'babel-loader',
-			query: {
-				presets: ['es2015', 'react']
-			}
-		}]
-	},
+    module: {
+        loaders: [{
+            test: path.join(__dirname, 'src/js/popup.jsx'),
+            loader: 'babel-loader',
+            query: {
+                presets: ['es2015', 'react']
+            }
+        }]
+    },
     plugins: [
         new CopyWebpackPlugin([
             { from: path.join(__dirname,"src/html/"), to: path.join(__dirname,"build/html") },

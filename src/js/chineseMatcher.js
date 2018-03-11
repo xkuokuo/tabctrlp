@@ -1,6 +1,5 @@
 var R = require('ramda');
 var pinyin = require('pinyin');
-var count = 0;
 var recursiveLimit = 2000;
 
 function containsUpperCase(str) {
@@ -22,157 +21,120 @@ function isChineseChar(char) {
     return false;
 }
 
+function convertChineseCharToSinglePinyin(chineseChar){
+    let pinyins = convertChineseCharToPinyin(chineseChar);
+    if (pinyins.length == 0) {
+        return '';
+    } else {
+        return pinyins[0][0];
+    }
+}
+
 function convertChineseCharToPinyin(chineseChar){
     return pinyin(chineseChar, {heteronym: true, style: pinyin.STYLE_NORMAL});
 }
 
-function convertStrToPinyin(chineseStr, delimiter) {
-    var resultsArr = [];
-    if (delimiter === undefined){
-        delimiter = '';
-    }
-    convertStrToPinyinRecursive(chineseStr, '', resultsArr, delimiter);
-    return resultsArr;
-}
-
-function convertStrToPinyinRecursive(chineseStr, partialResult, resultsArr, delimiter) {
-    if (delimiter === undefined){
-        delimiter = '';
-    }
-    if (!chineseStr){
-        resultsArr.push(partialResult);
-        return;
-    }
-    var pinyinStr = partialResult;
-    var  char = chineseStr.charAt(0);
-    if (isChineseChar(char)) {
-        //convert to pinyin
-        let pinyins = pinyin(char, {heteronym: true, style: pinyin.STYLE_NORMAL});
-        for (let pinyin of pinyins[0] ) {
-            var capitalPinyin = delimiter + pinyin.charAt(0).toUpperCase() + pinyin.substring(1) + delimiter;
-            convertStrToPinyinRecursive(chineseStr.substring(1), partialResult+capitalPinyin, resultsArr, delimiter)
+/**
+ *
+ */
+function addMarkupsToChinese(pattern, testStr, beginingMark = '<mark>', endingMark = '<\/mark>') {
+    var matchedPositions = new Set(matchAgainstChineseStr(pattern, testStr));
+    var res = ''
+    for (var i = 0; i < testStr.length; i ++) {
+        if (matchedPositions.has(i)) {
+            res = res + beginingMark + testStr.charAt(i) + endingMark;
+        } else {
+            res = res + testStr.charAt(i);
         }
-    } else {
-        pinyinStr = pinyinStr + char;
-        convertStrToPinyinRecursive(chineseStr.substring(1), partialResult+char, resultsArr, delimiter);
     }
+    return res;
 }
 
-function addMarkupsChinese(pattern, testStr) {
-    count = 0;
-    var resultsArr = []
-    addMarkupsChineseRecursive(pattern, testStr, '', resultsArr, containsUpperCase(pattern));
-    var mergedResultList = resultsArr;
-    var numOfMarksCount = R.map(countMarkTag, mergedResultList);
-    if (mergedResultList.length > 0) {
-        return mergedResultList[findMinIndex(numOfMarksCount)]
-    } else {
-        return [];
-    }
+/**
+ * Returning a list of positions (list of num) representing the best
+ * pinyin matching result
+ */
+function matchAgainstChineseStr(pattern, testStr) {
+    var matchedCandidates = matchAgainstChineseStrRecursive(pattern, testStr, 0, containsUpperCase(pattern), 0);
+    var numOfBreakPoints = R.map(l => numOfInconsecutivePoints(l), matchedCandidates)
+    return matchedCandidates[findMinIndex(numOfBreakPoints)];
 }
 
-function addMarkupsChineseRecursive(pattern, testStr, partialRes, resultsArr, caseSensitive) {
+function numOfInconsecutivePoints(listOfNum) {
+    var count = 0;
+    for (var i = 1; i < listOfNum.length; i ++) {
+        if (listOfNum[i] - listOfNum[i-1] != 1)
+            count ++;
+    }
+    return count;
+}
+
+/**
+ * Returning a list of list of positions (starting from startingPos)
+ * representing all pinyin matching result.
+ */
+function matchAgainstChineseStrRecursive(pattern, testStr, startingPos, caseSensitive, count) {
+    var results = [];
+
     if (pattern.length === 0) {
-        resultsArr.push(partialRes + testStr);
-        return;
+        return [[]];
     }
-    var beginingMark = '<mark>';
-    var endingMark = '<\/mark>';
+
+    if (testStr.length === 0) {
+        return results;
+    }
+
+    count = count + 1;
+    if (count > recursiveLimit) {
+        return results; //too much recursive calls, would impact user experience.
+    }
+
     var remaining = caseSensitive ? testStr : testStr.toLowerCase();
-    var remainingOriginal  = testStr;
-
     while(remaining.length > 0) {
-        var ifPartialResEndsWithMark = partialRes.endsWith(endingMark);
-        //terminate early if there is already better solutions
-        if (resultsArr.length > 0) {
-            for (let result of resultsArr) {
-                if (result.length <= partialRes.length + remaining.length + (ifPartialResEndsWithMark?0:(beginingMark.length+endingMark.length))) {
-                    return;
-                }
-            }
-        }
-
-        count = count + 1;
-
-        if (count > recursiveLimit) {
-            return; //too much recursive calls, would impact user experience.
-        }
-        var pos = -1;
+        var matchedPos = -1;
         for (let i = 0; i < remaining.length; i ++) {
             if (isChineseChar(remaining.charAt(i))) {
-                //for each pinyin case, check if this cahr could match
-                //if have match(s), call next recursive(s)
-                //and no matter match or not, skip this chineseChar
-                R.forEach((pinyin) => {
-                    for (let j = 0; j < pattern.length && j < pinyin.length; j++) {
-                        let ifCharMatch = (pattern.charAt(j) == pinyin.charAt(j));
-                        if ((ifCharMatch && (j===(pattern.length-1) || j===(pinyin.length-1)))|| ((!ifCharMatch) && j != 0)) {
-                            //find a match
-                            pos = i;
-                            let patternPos =ifCharMatch?j:(j-1);
-                            let newPartialRes;
-                            if (ifPartialResEndsWithMark && pos === 0){
-                                newPartialRes = partialRes.substring(0, partialRes.length-endingMark.length) +
-                                     remainingOriginal.charAt(0) + endingMark;
-                            } else {
-                                newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
-                                    beginingMark + remainingOriginal.charAt(pos) + endingMark;
-                            }
-                            addMarkupsChineseRecursive(pattern.substring(patternPos+1), remainingOriginal.substring(pos+1), newPartialRes, resultsArr, caseSensitive)
-                            break;
-                        } else if (pattern.charAt(j) != pinyin.charAt(j) && j == 0) {
-                            //not a match,
-                            break;
-                        }
-                    }
-                },
-                convertChineseCharToPinyin(remaining.charAt(i))[0]);
-                //ignore this chinese char, continue matching
-                if(pos >= 0 ){
-                    break;
+                // Chinese matching mode
+                // ignore multiple pinyin first...
+                var pinyin = convertChineseCharToSinglePinyin(remaining.charAt(i));
+                var singlePinyinMachedCount = singlePinyinMatch(pinyin, pattern)
+                if (singlePinyinMachedCount > 0) {
+                    matchedPos = startingPos + i;
+                    var subResults = matchAgainstChineseStrRecursive(pattern.substring(singlePinyinMachedCount), remaining.substring(i + 1), matchedPos + 1, caseSensitive, count + 1);
+                    results = R.concat(results, R.map(l => R.prepend(matchedPos, l), subResults))
                 }
-            } else if (remaining.charAt(i) === pattern.charAt(0)) {
-                //plain english char matching mode
-                pos = i;
-                var newPartialRes;
-                if (ifPartialResEndsWithMark && pos === 0){
-                    newPartialRes = partialRes.substring(0, partialRes.length-endingMark.length) +
-                         remainingOriginal.charAt(0) + endingMark;
-                } else {
-                    newPartialRes = partialRes + remainingOriginal.substring(0,pos) +
-                        beginingMark + remainingOriginal.charAt(pos) + endingMark;
-                }
-                addMarkupsChineseRecursive(pattern.substring(1), remainingOriginal.substring(pos + 1), newPartialRes, resultsArr, caseSensitive);
-                if(pos >= 0 ){
-                    break;
+            } else {
+                // Switch to English matching mode
+                if (remaining.charAt(i) === pattern.charAt(0)){
+                    // we have a match!
+                    matchedPos = startingPos + i;
+                    var subResults = matchAgainstChineseStrRecursive(pattern.substring(1), remaining.substring(i + 1), matchedPos + 1, caseSensitive, count + 1);
+                    results = R.concat(results, R.map(l => R.prepend(matchedPos, l), subResults))
                 }
             }
         }
-
-        if (pos === -1 ) {
-            return;        //no match char found, not even a potential solution
+        if (matchedPos >= 0) {
+            //skip matched resultchar, continue matching
+            remaining = remaining.substring(1 + matchedPos);
+        } else { // no match anymore... return results directly
+            return results;
         }
-        if (resultsArr.length === 0 && !isChineseChar(remaining.charAt(pos))) {
-            //that means previous sets of recursive calls didn't find any match
-            //Need to check if previous matched char is a chinese char
-            //Since for chinese pinyin we can't match aggresively like english,
-            //Because pinyin has rules
-            return;
-        }
-        //ignore the matching result, move remaining to a new position, move partialRes to a new position
-        partialRes = partialRes + remainingOriginal.substring(0, pos + 1)
-        remaining = remaining.substring(pos+1);
-        remainingOriginal = remainingOriginal.substring(pos+1);
-
     }
-    return;
+    return results;
 }
 
-function countMarkTag(str) {
-    if (str)
-        return (str.match(/<mark>/g)||[]).length;
-    else
+function singlePinyinMatch(pinyin, pattern) {
+    if (pattern.length === 0 || pinyin.length === 0 || pattern.charAt(0) != pinyin.charAt(0)) {
+        // At least has to match the first char of pinyin.
         return 0;
+    }
+    var matchedCount = 1;
+    var pos = 1;
+    while (pos < pinyin.length && pos < pattern.length && (pinyin.charAt(pos) === pattern.charAt(pos))) {
+        matchedCount ++;
+        pos++;
+    }
+    return matchedCount;
 }
 
 function findMinIndex(arr) {
@@ -186,8 +148,8 @@ function findMinIndex(arr) {
 }
 
 module.exports = {
+    matchAgainstChineseStr: matchAgainstChineseStr,
     convertChineseCharToPinyin: convertChineseCharToPinyin,
     containsChinese: containsChinese,
-    convertStrToPinyin: convertStrToPinyin,
-    addMarkups: addMarkupsChinese,
+    addMarkups: addMarkupsToChinese,
 }

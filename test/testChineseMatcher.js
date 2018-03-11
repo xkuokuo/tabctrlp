@@ -4,60 +4,26 @@ var chineseMatcher = require('../src/js/chineseMatcher');
 describe('Array', function() {
     describe('#indexOf()', function() {
         it('should return -1 when the value is not present', function() {
-                  assert.equal(-1, [1,2,3].indexOf(4));
+            assert.equal(-1, [1,2,3].indexOf(4));
         });
     });
 });
 
 describe('chineseMatcher', function() {
-    describe('#convertChineseCharToPinyin()', function() {
-        it('should return ji given the character "鸡"', function() {
-            assert.deepEqual(['ji'], chineseMatcher.convertChineseCharToPinyin('鸡')[0]);
+    describe('#matchAgainstChineseStr()', function() {
+        it('should return matched chinese char positions', function() {
+            var testStr = "我吃了我碗里的肉";
+            assert.deepEqual([ 3, 4 ], chineseMatcher.matchAgainstChineseStr('ww', testStr));
+            assert.deepEqual([ 4, 5, 6, 7 ],  chineseMatcher.matchAgainstChineseStr('wldr', testStr));
+            assert.deepEqual([ 0, 7 ], chineseMatcher.matchAgainstChineseStr('wor', testStr));
         });
     });
-});
 
-describe('chineseMatcher', function() {
-    describe('#convertChineseCharToPinyin()', function() {
-        it('should return [liao, le] given the character "了"', function() {
-            console.log(chineseMatcher.convertChineseCharToPinyin('了'));
-            assert.deepEqual(['liao','le'], chineseMatcher.convertChineseCharToPinyin('了')[0]);
-        });
-    });
-});
-
-describe('chineseMatcher', function() {
-    describe('#convertStrToPinyin()', function() {
-        it('should return ["WoAiNi"] given the character "我爱你"', function() {
-            console.log(chineseMatcher.convertStrToPinyin('我爱你'));
-            assert.deepEqual(['WoAiNi'], chineseMatcher.convertStrToPinyin('我爱你'));
-        });
-    });
-});
-
-describe('chineseMatcher', function() {
-    describe('#convertStrToPinyin()', function() {
-        it('should return ["ChiLiao", "ChiLe"] given the character "吃了"', function() {
-            console.log(chineseMatcher.convertStrToPinyin('吃了'));
-            assert.deepEqual(['ChiLiao','ChiLe'], chineseMatcher.convertStrToPinyin('吃了'));
-        });
-    });
-});
-
-describe('chineseMatcher', function() {
-    describe('#convertStrToPinyin()', function() {
-        it('should return ["A ChiLiao", "A ChiLe"] given the character "A 吃了"', function() {
-            console.log(chineseMatcher.convertStrToPinyin('A 吃了'));
-            assert.deepEqual(['A ChiLiao','A ChiLe'], chineseMatcher.convertStrToPinyin('A 吃了'));
-        });
-    });
-});
-
-describe('chineseMatcher', function() {
     describe('#addMarkups()', function() {
-        it('should return "<markup>我</markup>吃了" given the str"我吃了" and the pattern wo', function() {
+        it('should return "<mark>我</mark>吃了" given the str"我吃了" and the pattern wo', function() {
             console.log(chineseMatcher.addMarkups('wo',"我吃了"));
-            //assert.equal('<markup>我</markup>吃了', chineseMatcher.addMarkups('wo',"我吃了"));
+            assert.equal('<mark>我</mark>吃了', chineseMatcher.addMarkups('wo',"我吃了"));
         });
     });
 });
+
