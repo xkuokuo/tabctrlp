@@ -50,15 +50,6 @@ const mapDispatchToProps = (dispatch) => {
     }
 }
 
-class TabModel {
-    constructor(props) {
-        this.title = props.title;
-        this.id = props.id;
-        this.favIconUrl = props.favIconUrl;
-        this.index = props.index;
-    }
-}
-
 class TabEntry extends React.Component {
     render() {
         var className = "clearFix col-md-10 col-sm-10 col-xs-10 ";
