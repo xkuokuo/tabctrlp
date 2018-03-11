@@ -3,6 +3,7 @@ var R = require('ramda');
 var allTabs = [];
 
 var currentTabIndex = 0;
+var lastTabIndex = 0;
 
 function setAllTabs() {
     getAllTabsOfCurrentWindow(function(tabs){
@@ -15,6 +16,7 @@ function getCurrentTabIndex(){
 }
 
 function updateCurrentTabIndex(){
+    lastTabIndex = currentTabIndex;
     chrome.tabs.getSelected((tab) => {
         //TODO: getSelected methos is deprecated. Replace it
         currentTabIndex = tab.index;
@@ -38,6 +40,12 @@ function getAllTabsOfWindow(windowId, callback) {
 //preload
 setAllTabs();
 
+chrome.commands.onCommand.addListener(function(command) {
+    console.log('Command:', command);
+    var lastTabId = getAllTabs()[lastTabIndex].id
+    chrome.tabs.update(lastTabId, {active: true, highlighted:true});
+});
+
 document.addEventListener('DOMContentLoaded', function(){
     console.log("Background loaded");
 
@@ -57,4 +65,3 @@ document.addEventListener('DOMContentLoaded', function(){
         window.getCurrentTabIndex= getCurrentTabIndex;
     }
 });
-

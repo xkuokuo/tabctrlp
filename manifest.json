@@ -28,6 +28,13 @@
         "windows": "Alt+P",
         "mac": "MacCtrl+P"
       }
+    },"goto-last-viewed-tab": {
+      "suggested_key": {
+        "default": "Alt+6",
+        "windows": "Alt+6",
+        "mac": "MacCtrl+6"
+      },
+      "description": "Toggle between this tab and last viewed tab"
     }
   }
 }
