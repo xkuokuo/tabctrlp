@@ -9,9 +9,7 @@ var initState = {
     inputText: '',
     allTabs: backgroundPage.getAllTabs(),
     matchedTabs: backgroundPage.getAllTabs(),
-    currentTabIndex: backgroundPage.getCurrentTabIndex(),
-    selectedTabPos: backgroundPage.getCurrentTabIndex(),
-    selectedTabId: backgroundPage.getAllTabs()[backgroundPage.getCurrentTabIndex()].id
+    selectedTabId: backgroundPage.getCurrentTabId()
 }
 
 class TabModel {
@@ -52,7 +50,8 @@ function removeTabReducer(state = initState, action) {
 function keyDownReducer(state = initState, action) {
     switch (action.type){
         case actions.KEY_DOWN:
-            var selectedTabPos= state.selectedTabPos;
+            var selectedTabId = state.selectedTabId
+            var selectedTabPos= R.findIndex((tab)=>{return tab.id === selectedTabId}, state.matchedTabs);
             var newPos = selectedTabPos;
             var selectedTabId = state.selectedTabId;
             if (action.keyCode == 38) {
@@ -64,7 +63,6 @@ function keyDownReducer(state = initState, action) {
             }
             selectedTabId = (state.matchedTabs.length > selectedTabPos)?state.matchedTabs[selectedTabPos].id:0;
             return Object.assign({}, state, {
-                selectedTabPos: selectedTabPos,
                 selectedTabId: selectedTabId
             });
         default:
@@ -77,17 +75,17 @@ function inputChangedReducer(state = initState, action) {
         case actions.INPUT_CHANGED:
             var inputText = action.inputText;
             var allTabs = state.allTabs;
-            var selectedTabPos = state.selectedTabPos;
             var selectedTabId = state.selectedTabId;
+            var selectedTabPos= R.findIndex((tab)=>{return tab.id === selectedTabId}, state.matchedTabs);
             if (inputText) {
                 var matchedTabs = R.sort((tab1, tab2) => {
-                    let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
-                    if (markCount != 0) {
-                        return markCount;
-                    } else {
-                        return tab1.title.indexOf('<mark>') - tab2.title.indexOf('<mark>');
-                    }
-                },
+                        let markCount = countMarkTag(tab1.title) - countMarkTag(tab2.title)
+                        if (markCount != 0) {
+                            return markCount;
+                        } else {
+                            return tab1.title.indexOf('<mark>') - tab2.title.indexOf('<mark>');
+                        }
+                    },
                     R.filter((tab) => ifContainsMarkup(tab.title),
                         R.map((tab) => ( new TabModel({title: addMarkups(inputText, tab.title), id: tab.id, index: tab.index, favIconUrl: tab.favIconUrl})),
                             R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}),
@@ -95,13 +93,11 @@ function inputChangedReducer(state = initState, action) {
                 selectedTabPos = 0;
             } else {
                 matchedTabs = R.map((tab) => new TabModel({title: tab.title, favIconUrl: tab.favIconUrl, id: tab.id, index: tab.index}), allTabs);
-                selectedTabPos = state.currentTabIndex;
             }
-            selectedTabId =  (matchedTabs.length>selectedTabPos)?matchedTabs[selectedTabPos].id:0
+            selectedTabId = (matchedTabs.length>selectedTabPos)?matchedTabs[selectedTabPos].id:0
             return Object.assign({}, state, {
                 inputText: inputText,
                 matchedTabs: matchedTabs,
-                selectedTabPos: selectedTabPos,
                 selectedTabId: selectedTabId
             });
         default:
@@ -128,9 +124,8 @@ function mouseHoveredReducer (state = initState, action){
     switch (action.type){
         case actions.MOUSE_HOVERED:
             var selectedTabId = action.id;
-            var selectedTabPos = R.findIndex((tab)=>{return tab.id===selectedTabId}, state.matchedTabs);
+            var selectedTabPos = R.findIndex((tab)=>{return tab.id === selectedTabId}, state.matchedTabs);
             return Object.assign({}, state, {
-                selectedTabPos: selectedTabPos,
                 selectedTabId: selectedTabId
             });
         default:

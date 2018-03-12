@@ -16,8 +16,6 @@ const mapStateToProps = (state) => {
             allTabs: state.allTabs,
             inputText: state.inputText,
             matchedTabs: state.matchedTabs,
-            currentTabIndex: state.currentTabIndex,
-            selectedTabPos: state.selectedTabPos,
             selectedTabId: state.selectedTabId
         }
     }
@@ -178,7 +176,6 @@ let App = ({states, actions}) => {
                     onMouseOver={actions.onMouseOver}
                     allTabs={states.allTabs}
                     matchedTabs={states.matchedTabs}
-                    currentTabIndex={states.currentTabIndex}
                     selectedTabId={states.selectedTabId}/>
             </div>
         </ReactCSSTransitionGroup>);
@@ -190,9 +187,7 @@ var initState = {
     inputText: '',
     allTabs: backgroundPage.getAllTabs(),
     matchedTabs: backgroundPage.getAllTabs(),
-    currentTabIndex: backgroundPage.getCurrentTabIndex(),
-    selectedTabPos: backgroundPage.getCurrentTabIndex(),
-    selectedTabId: backgroundPage.getAllTabs()[backgroundPage.getCurrentTabIndex()].id
+    selectedTabId: backgroundPage.getCurrentTabId()
 }
 
 var store = Redux.createStore(appReducer, initState);

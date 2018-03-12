@@ -2,11 +2,8 @@ var R = require('ramda');
 
 var allTabs = [];
 
-var currentTabIndex = 0;
-
 /**
- * {
- *   currentWindowId: windowId1,
+ * { *   currentWindowId: windowId1,
  *   windowId1: {
  *      currentTabId: 1234,
  *      lastTabId: 12345,
@@ -18,8 +15,8 @@ var currentTabIndex = 0;
  */
 var tabStorage = {};
 
-function getCurrentTabIndex(){
-    return currentTabIndex;
+function getCurrentTabId() {
+    return tabStorage[tabStorage.currentWindowId].currentTabId;
 }
 
 function updateCurrentTab(windowId, tabId){
@@ -37,10 +34,6 @@ function updateCurrentTab(windowId, tabId){
         tabStorage[windowId].lastTabId = tabStorage[windowId].currentTabId
         tabStorage[windowId].currentTabId = tabId;
     }
-
-    chrome.tabs.getSelected((tab) => {
-        currentTabIndex = tab.index;
-    });
 }
 
 function getLastElementInList(l) {
@@ -153,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!window.getAllTabsOfCurrentWindow){
         window.getAllTabsOfCurrentWindow = getAllTabsOfCurrentWindow;
     }
-    if (!window.getCurrentTabIndex){
-        window.getCurrentTabIndex= getCurrentTabIndex;
+    if (!window.getCurrentTabId){
+        window.getCurrentTabId = getCurrentTabId;
     }
 });
