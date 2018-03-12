@@ -4,21 +4,15 @@ var allTabs = [];
 
 var currentTabIndex = 0;
 
-var currentWindowId = 0;
-
 /**
  * {
+ *   currentWindowId: windowId1,
  *   windowId1: {
  *      currentTabId: 1234,
  *      lastTabId: 12345,
  *      prevViewedTabs: [1234, 135, 892...]
- *      futureViewdTabs: []
- *   },
- *   windowId2: {
- *      currentTabId: 2345,
- *      lastTabId: 234567
- *      prevViewedTabs: [2345]
- *      futureViewdTabs: [34]
+ *      futureViewdTabs: [],
+ *      jumpMode: true
  *   }
  * }
  */
@@ -28,22 +22,24 @@ function getCurrentTabIndex(){
     return currentTabIndex;
 }
 
-function updateCurrentTabInfo(){
-    chrome.tabs.getSelected((tab) => {
-        // TODO: getSelected methos is deprecated. Replace it
-        currentWindowId = tab.windowId;
-        currentTabIndex = tab.index;
-        // update tab jump list
-        if (tabStorage[tab.windowId].currentTabId != tab.id) {
-            if (tabStorage[tab.windowId].jumpMode) {
-                tabStorage[tab.windowId].jumpMode = false;
-            } else {
-                if(tabStorage[tab.windowId].currentTabId != getLastElementInList(tabStorage[tab.windowId]))
-                    tabStorage[tab.windowId].prevViewedTabs.push(tabStorage[tab.windowId].currentTabId);
-            }
-            tabStorage[tab.windowId].lastTabId = tabStorage[tab.windowId].currentTabId
-            tabStorage[tab.windowId].currentTabId = tab.id;
+function updateCurrentTab(windowId, tabId){
+    tabStorage.currentWindowId = windowId;
+    if (tabStorage[windowId] == null) {
+        initTabStorage(windowId, tabId);
+    }
+    // update tab jump list
+    if (tabStorage[windowId].currentTabId != tabId) {
+        if (tabStorage[windowId].jumpMode) {
+            tabStorage[windowId].jumpMode = false;
+        } else if(tabStorage[windowId].currentTabId != getLastElementInList(tabStorage[windowId])) {
+            tabStorage[windowId].prevViewedTabs.push(tabStorage[windowId].currentTabId);
         }
+        tabStorage[windowId].lastTabId = tabStorage[windowId].currentTabId
+        tabStorage[windowId].currentTabId = tabId;
+    }
+
+    chrome.tabs.getSelected((tab) => {
+        currentTabIndex = tab.index;
     });
 }
 
@@ -69,21 +65,21 @@ function getAllTabsOfWindow(windowId, callback) {
     });
 }
 
-function loadAllTabs() {
+function updateAllTabs() {
     getAllTabsOfCurrentWindow(function(tabs){
         allTabs = tabs;
     });
 }
 
-function initialCurrentWindow() {
-    getCurrentTab(function(tab) {
-        currentWindowId = tab.windowId;
-        tabStorage[tab.windowId] = {};
-        tabStorage[tab.windowId].currentTabId = tab.id;
-        tabStorage[tab.windowId].lastTabId = tab.id;
-        tabStorage[tab.windowId].prevViewedTabs = [];
-        tabStorage[tab.windowId].futureViewedTabs = [];
-    });
+function initTabStorage(windowId, tabId) {
+    tabStorage.currentWindowId = windowId;
+    if (tabStorage[windowId] == null) {
+        tabStorage[windowId] = {};
+        tabStorage[windowId].currentTabId = tabId;
+        tabStorage[windowId].lastTabId = tabId;
+        tabStorage[windowId].prevViewedTabs = [];
+        tabStorage[windowId].futureViewedTabs = [];
+    }
 }
 
 function getCurrentTab(tabCallback) {
@@ -94,58 +90,62 @@ function getCurrentTab(tabCallback) {
 }
 
 // Initialization
-loadAllTabs();
-initialCurrentWindow();
+getCurrentTab((currentTab) => {
+    initTabStorage(currentTab.windowId, currentTab.id);
+    updateAllTabs();
+});
 
 document.addEventListener('DOMContentLoaded', function(){
-    chrome.tabs.onCreated.addListener(() => {
+    // tabs event listener
+    chrome.tabs.onCreated.addListener((tab) => {
         // destroy future viewed tab list
-        tabStorage[currentWindowId].futureViewedTabs = [];
+        tabStorage[tabStorage.currentWindowId].futureViewedTabs = [];
     });
+
     chrome.tabs.onRemoved.addListener((tabId) => {
         // remove this tab id from jump list
-        tabStorage[currentWindowId].prevViewedTabs = R.filter(
-            (e) => e != tabId,
-            tabStorage[currentWindowId].prevViewedTabs);
-        tabStorage[currentWindowId].futureViewedTabs = R.filter(
-            (e) => e != tabId,
-            tabStorage[currentWindowId].futureViewedTabs);
+        tabStorage[tabStorage.currentWindowId].prevViewedTabs = R.filter(
+            (e) => e != tabId, tabStorage[tabStorage.currentWindowId].prevViewedTabs);
+        tabStorage[tabStorage.currentWindowId].futureViewedTabs = R.filter(
+            (e) => e != tabId, tabStorage[tabStorage.currentWindowId].futureViewedTabs);
+        tabStorage[tabStorage.currentWindowId].jumpMode = true;
+        updateAllTabs();
+    });
 
-        tabStorage[currentWindowId].jumpMode = true;
-        loadAllTabs(); });
-    chrome.tabs.onUpdated.addListener(loadAllTabs);
-    chrome.tabs.onActivated.addListener(updateCurrentTabInfo);
-    chrome.tabs.onHighlighted.addListener(updateCurrentTabInfo);
+    chrome.tabs.onUpdated.addListener(updateAllTabs);
 
-    chrome.windows.onCreated.addListener(initialCurrentWindow);
-    chrome.windows.onFocusChanged.addListener(loadAllTabs);
-    chrome.windows.onFocusChanged.addListener(updateCurrentTabInfo);
+    chrome.tabs.onMoved.addListener(updateAllTabs);
+
+    chrome.tabs.onActivated.addListener((activeInfo) => {
+        updateCurrentTab(activeInfo.windowId, activeInfo.tabId)});
+
+    chrome.windows.onFocusChanged.addListener(updateAllTabs);
+
     chrome.windows.onRemoved.addListener((windowId) => delete tabStorage[windowId])
 
     // toggle between current tab and previous viewed tabs
     chrome.commands.onCommand.addListener(function(command) {
         if (command === "goto-last-viewed-tab") {
-            var lastViewedTabId = tabStorage[currentWindowId].prevViewedTabs.pop();
+            var lastViewedTabId = tabStorage[tabStorage.currentWindowId].prevViewedTabs.pop();
             if (lastViewedTabId === undefined)
                 return;
-            tabStorage[currentWindowId].futureViewedTabs.push(
-                tabStorage[currentWindowId].currentTabId);
-            tabStorage[currentWindowId].jumpMode = true;
+            tabStorage[tabStorage.currentWindowId].futureViewedTabs.push(
+                tabStorage[tabStorage.currentWindowId].currentTabId);
+            tabStorage[tabStorage.currentWindowId].jumpMode = true;
             chrome.tabs.update(lastViewedTabId , {active: true, highlighted:true});
         } else if (command === "goto-next-viewed-tab") {
-            var nextViewedTabId = tabStorage[currentWindowId].futureViewedTabs.pop();
+            var nextViewedTabId = tabStorage[tabStorage.currentWindowId].futureViewedTabs.pop();
             if (nextViewedTabId === undefined)
                 return;
-            tabStorage[currentWindowId].prevViewedTabs.push(
-                tabStorage[currentWindowId].currentTabId);
-            tabStorage[currentWindowId].jumpMode = true;
+            tabStorage[tabStorage.currentWindowId].prevViewedTabs.push(
+                tabStorage[tabStorage.currentWindowId].currentTabId);
+            tabStorage[tabStorage.currentWindowId].jumpMode = true;
             chrome.tabs.update(nextViewedTabId, {active: true, highlighted:true});
         } else {
-            tabStorage[currentWindowId].jumpMode = true;
-            chrome.tabs.update(tabStorage[currentWindowId].lastTabId, {active: true, highlighted:true});
+            tabStorage[tabStorage.currentWindowId].jumpMode = true;
+            chrome.tabs.update(tabStorage[tabStorage.currentWindowId].lastTabId, {active: true, highlighted:true});
         }
     });
-
 
     if (!window.getAllTabs){
         window.getAllTabs= getAllTabs;
