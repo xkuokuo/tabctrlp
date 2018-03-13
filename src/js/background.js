@@ -112,11 +112,13 @@ document.addEventListener('DOMContentLoaded', function(){
     chrome.tabs.onActivated.addListener((activeInfo) => {
         updateCurrentTab(activeInfo.windowId, activeInfo.tabId)});
 
-    chrome.windows.onFocusChanged.addListener(updateAllTabs);
+    chrome.windows.onFocusChanged.addListener((windowId) => {
+        tabStorage.currentWindowId = windowId;
+        updateAllTabs();
+    });
 
     chrome.windows.onRemoved.addListener((windowId) => delete tabStorage[windowId])
 
-    // toggle between current tab and previous viewed tabs
     chrome.commands.onCommand.addListener(function(command) {
         if (command === "goto-last-viewed-tab") {
             var lastViewedTabId = tabStorage[tabStorage.currentWindowId].prevViewedTabs.pop();
@@ -135,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function(){
             tabStorage[tabStorage.currentWindowId].jumpMode = true;
             chrome.tabs.update(nextViewedTabId, {active: true, highlighted:true});
         } else {
+            // toggle between current tab and previous viewed tabs
             tabStorage[tabStorage.currentWindowId].jumpMode = true;
             chrome.tabs.update(tabStorage[tabStorage.currentWindowId].lastTabId, {active: true, highlighted:true});
         }
