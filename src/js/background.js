@@ -72,6 +72,7 @@ function initTabStorage(windowId, tabId) {
         tabStorage[windowId].lastTabId = tabId;
         tabStorage[windowId].prevViewedTabs = [];
         tabStorage[windowId].futureViewedTabs = [];
+        tabStorage[windowId].jumpMode = false;
     }
 }
 
@@ -122,6 +123,9 @@ document.addEventListener('DOMContentLoaded', function(){
     chrome.commands.onCommand.addListener(function(command) {
         if (command === "goto-last-viewed-tab") {
             var lastViewedTabId = tabStorage[tabStorage.currentWindowId].prevViewedTabs.pop();
+            while (lastViewedTabId === tabStorage[tabStorage.currentWindowId].currentTabId) {
+                lastViewedTabId = tabStorage[tabStorage.currentWindowId].prevViewedTabs.pop();
+            }
             if (lastViewedTabId === undefined)
                 return;
             tabStorage[tabStorage.currentWindowId].futureViewedTabs.push(
@@ -130,6 +134,9 @@ document.addEventListener('DOMContentLoaded', function(){
             chrome.tabs.update(lastViewedTabId , {active: true, highlighted:true});
         } else if (command === "goto-next-viewed-tab") {
             var nextViewedTabId = tabStorage[tabStorage.currentWindowId].futureViewedTabs.pop();
+            while (nextViewedTabId === tabStorage[tabStorage.currentWindowId].futureViewedTabs) {
+                nextViewedTabId = tabStorage[tabStorage.currentWindowId].futureViewedTabs.pop();
+            }
             if (nextViewedTabId === undefined)
                 return;
             tabStorage[tabStorage.currentWindowId].prevViewedTabs.push(
