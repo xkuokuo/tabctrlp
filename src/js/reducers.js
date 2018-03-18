@@ -24,9 +24,8 @@ class TabModel {
 function jumpToTabReducer(state = initState, action) {
     switch (action.type){
         case actions.JUMP_TO_TAB:
-            chrome.tabs.update(state.selectedTabId, {active: true, highlighted:true});
-            console.log("hi");
             backgroundPage.clearAllFutureTabs();
+            chrome.tabs.update(state.selectedTabId, {active: true, highlighted:true});
             return state;
         default:
             return state;
@@ -134,7 +133,6 @@ function mouseHoveredReducer (state = initState, action){
             return state;
     }
 }
-
 
 const appReducer = (state = initState, action ) => {
     var new_state = jumpToTabReducer(removeTabReducer(inputChangedReducer(mouseHoveredReducer(keyDownReducer(state, action),action),action),action),action)

@@ -35,7 +35,8 @@ function updateCurrentTab(windowId, tabId){
     if (tabStorage[windowId].currentTabId != tabId) {
         if (tabStorage[windowId].jumpMode) {
             tabStorage[windowId].jumpMode = false;
-        } else if(tabStorage[windowId].currentTabId != getLastElementInList(tabStorage[windowId])) {
+        } else if( tabStorage[windowId].prevViewedTabs.length == 0
+            || tabStorage[windowId].currentTabId != getLastElementInList(tabStorage[windowId])) {
             tabStorage[windowId].prevViewedTabs.push(tabStorage[windowId].currentTabId);
         }
         tabStorage[windowId].lastTabId = tabStorage[windowId].currentTabId
@@ -163,5 +164,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (!window.getCurrentTabId){
         window.getCurrentTabId = getCurrentTabId;
+    }
+    if (!window.clearAllFutureTabs){
+        window.clearAllFutureTabs = clearAllFutureTabs;
     }
 });
