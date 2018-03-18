@@ -38,6 +38,9 @@ function updateCurrentTab(windowId, tabId){
         } else if( tabStorage[windowId].prevViewedTabs.length == 0
             || tabStorage[windowId].currentTabId != getLastElementInList(tabStorage[windowId])) {
             tabStorage[windowId].prevViewedTabs.push(tabStorage[windowId].currentTabId);
+            if (tabStorage[windowId].prevViewedTabs.length > 100) {
+                tabStorage[windowId].prevViewedTabs.shift();
+            }
         }
         tabStorage[windowId].lastTabId = tabStorage[windowId].currentTabId
         tabStorage[windowId].currentTabId = tabId;
