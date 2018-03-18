@@ -1,10 +1,9 @@
 var R = require('ramda');
 
-var allTabs = [];
-
 /**
  * { *   currentWindowId: windowId1,
  *   windowId1: {
+        allTabs: [1234, 1233, ...];
  *      currentTabId: 1234,
  *      lastTabId: 12345,
  *      prevViewedTabs: [1234, 135, 892...]
@@ -15,6 +14,14 @@ var allTabs = [];
  */
 var tabStorage = {};
 
+function getAllTabs() {
+    return tabStorage[tabStorage.currentWindowId].allTabs;
+}
+
+function clearAllFutureTabs() {
+    tabStorage[tabStorage.currentWindowId].futureViewedTabs = [];
+}
+
 function getCurrentTabId() {
     return tabStorage[tabStorage.currentWindowId].currentTabId;
 }
@@ -22,7 +29,7 @@ function getCurrentTabId() {
 function updateCurrentTab(windowId, tabId){
     tabStorage.currentWindowId = windowId;
     if (tabStorage[windowId] == null) {
-        initTabStorage(windowId, tabId);
+        initialCurrentWindow(windowId, tabId);
     }
     // update tab jump list
     if (tabStorage[windowId].currentTabId != tabId) {
@@ -44,10 +51,6 @@ function getLastNthElementInList(l, n) {
     return l[l.length-n]
 }
 
-function getAllTabs() {
-    return allTabs;
-}
-
 function getAllTabsOfCurrentWindow(callback) {
     getAllTabsOfWindow(chrome.windows.WINDOW_ID_CURRENT, callback);
 }
@@ -60,19 +63,21 @@ function getAllTabsOfWindow(windowId, callback) {
 
 function updateAllTabs() {
     getAllTabsOfCurrentWindow(function(tabs){
-        allTabs = tabs;
+        tabStorage[tabStorage.currentWindowId].allTabs = tabs;
     });
 }
 
-function initTabStorage(windowId, tabId) {
+function initialCurrentWindow(windowId, tabId) {
     tabStorage.currentWindowId = windowId;
     if (tabStorage[windowId] == null) {
         tabStorage[windowId] = {};
-        tabStorage[windowId].currentTabId = tabId;
-        tabStorage[windowId].lastTabId = tabId;
         tabStorage[windowId].prevViewedTabs = [];
         tabStorage[windowId].futureViewedTabs = [];
         tabStorage[windowId].jumpMode = false;
+    }
+    if (tabId != undefined) {
+        tabStorage[windowId].currentTabId = tabId;
+        tabStorage[windowId].lastTabId = tabId;
     }
 }
 
@@ -85,7 +90,7 @@ function getCurrentTab(tabCallback) {
 
 // Initialization
 getCurrentTab((currentTab) => {
-    initTabStorage(currentTab.windowId, currentTab.id);
+    initialCurrentWindow(currentTab.windowId, currentTab.id);
     updateAllTabs();
 });
 
@@ -93,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // tabs event listener
     chrome.tabs.onCreated.addListener((tab) => {
         // destroy future viewed tab list
-        tabStorage[tabStorage.currentWindowId].futureViewedTabs = [];
+        clearAllFutureTabs();
     });
 
     chrome.tabs.onRemoved.addListener((tabId) => {
@@ -114,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function(){
         updateCurrentTab(activeInfo.windowId, activeInfo.tabId)});
 
     chrome.windows.onFocusChanged.addListener((windowId) => {
-        tabStorage.currentWindowId = windowId;
+        initialCurrentWindow(windowId);
         updateAllTabs();
     });
 

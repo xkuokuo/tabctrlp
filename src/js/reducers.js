@@ -25,6 +25,8 @@ function jumpToTabReducer(state = initState, action) {
     switch (action.type){
         case actions.JUMP_TO_TAB:
             chrome.tabs.update(state.selectedTabId, {active: true, highlighted:true});
+            console.log("hi");
+            backgroundPage.clearAllFutureTabs();
             return state;
         default:
             return state;
