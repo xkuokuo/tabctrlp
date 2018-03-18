@@ -1,8 +1,7 @@
 var R = require('ramda');
 var $ = require('jquery');
 var React = require('react');
-var Redux = require('redux');
-var connect = require('react-redux').connect
+var Redux = require('redux'); var connect = require('react-redux').connect
 var Provider = require('react-redux').Provider
 var ReactDOM = require('react-dom');
 var ReactCSSTransitionGroup = require('react-addons-css-transition-group');
@@ -49,6 +48,13 @@ const mapDispatchToProps = (dispatch) => {
 }
 
 class TabEntry extends React.Component {
+    componentDidMount() {
+        setTimeout(() => {
+          var thisTab = ReactDOM.findDOMNode(this);
+          thisTab.querySelector("img").setAttribute('src', this.props.tab.favIconUrl);
+        }, 100);
+    }
+
     render() {
         var className = "clearFix col-md-10 col-sm-10 col-xs-10 ";
         className = className + (this.props.selected?" tab-selected":"");
@@ -57,14 +63,14 @@ class TabEntry extends React.Component {
                 <li className={ className }
                     onClick={()=>this.props.onTabClick(this.props.tab.id)}
                     onMouseOver={()=>this.props.onMouseOver(this.props.tab.id)}>
-                    <img className="img-responsive pull-left" src={this.props.tab.favIconUrl}/>
+                    <img className="img-responsive pull-left"/>
                     <p className="tab-title"
                         dangerouslySetInnerHTML={{__html: this.props.tab.title}}>
                     </p>
                     <p className="hidden">{this.props.tab.id}</p>
                 </li>
-            <div className="col-md-2 col-sm-2 col-xs-2">
-                <button className="btn-remove" onClick={()=>this.props.onTabRemove(this.props.tab.id)}>X</button>
+                <div className="col-md-2 col-sm-2 col-xs-2">
+                    <button className="btn-remove" onClick={()=>this.props.onTabRemove(this.props.tab.id)}>X</button>
                 </div>
             </div>);
     }
@@ -195,7 +201,6 @@ var store = Redux.createStore(appReducer, initState);
 const RootApp = connect(
       mapStateToProps,
       mapDispatchToProps
-
 )(App);
 
 document.addEventListener('DOMContentLoaded', function() {
